@@ -21,5 +21,6 @@ case class RevelioParams(
 ){
     require(fuDepth % blockSize == 0, "The depth of the functional units must be a multiple of the block size")
     require(Seq("SAD", "SSD", "NCC").contains(costFunction), "The cost function must be one of SAD, SSD, NCC")
+    require(imgWidth % 4 == 0, "The width of the image must be a multiple of 4")
     def numBlocksPerIter: Int = fuDepth / blockSize
 }
