@@ -38,12 +38,14 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
     // FINE counter tracking the serial width slicer write address
     val (w_bytes_count, w_bytes_done) = Counter(w_enable(enq_ptr), wWidth / rWidth)
     val w_addr = Wire(UInt(log2Ceil(dBanks).W))
+    w_addr := w_bytes_count + w_col_count << 2
     val w_serdes = Module(new SerialWidthSlicer(8, rWidth))
     w_serdes.io.wide <> io.write
 
     // FINE counter tracking the read address
     val (r_col_count, r_col_done) = Counter(io.read.response.valid, imgWidth)
-    val r_addr = Wire(UInt(log2Ceil(dBanks).W))
+    val (r_row_count, r_row_done) = Counter(r_col_done, imgHeight - nRows)
+    val r_addr = r_col_count
     val r_enable = Vec(nBanks, Bool())
     val r_datas = VecInit(Seq.fill(nRows){Wire(UInt(rWidth.W))})
     val (deq_ptr, _) = Counter(r_col_done, nBanks)
@@ -59,7 +61,7 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
                                      isWrite   = w_enable(i))}
 
     // state machine
-    val s_idle :: s_fill :: s_stable :: s_tail :: Nil = Enum(4)
+    val s_idle :: s_fill :: s_stable :: Nil = Enum(3)
 
     val state = RegInit(s_idle)
     switch(state){
@@ -68,35 +70,24 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
             state := Mux(io.write.fire, s_fill, s_idle)
             w_serdes.io.narrow.ready := true.B
             io.read.response.valid := false.B
+            r_enable.foreach(_ := false.B)
         }
 
         // fill the banks until nBanks-1 banks are full
         is(s_fill){
             state := Mux(enq_ptr === nRows.U, s_stable, s_fill)
             w_serdes.io.narrow.ready := w_bytes_done
-            w_addr := w_bytes_count + w_col_count << 2
             io.read.response.valid := false.B
+            r_enable.foreach(_ := false.B)
         }
 
         // write one bank, waiting for one full row read 
         is(s_stable){
-            state := Mux(w_row_count === imgHeight.U, s_tail, s_stable)
-            w_serdes.io.narrow.ready := w_bytes_done && !w_col_done
+            state := Mux(r_row_done, s_idle, s_stable)
+            w_serdes.io.narrow.ready := w_bytes_done && !w_col_done && !w_row_done
             for (i <- 0 until nBanks) {
                 r_enable(i) := i.U =/= enq_ptr && !r_col_done && io.read.request.valid
             }
-            r_addr := r_col_count
-            io.read.response.valid := RegNext(io.read.request.valid && !r_col_done)
-        }
-
-        // tail case, reject writes and only perform reads
-        is(s_tail){
-            w_serdes.io.narrow.ready := false.B
-            state := Mux(r_col_done, s_idle, s_tail)
-            for (i <- 0 until nBanks) {
-                r_enable(i) := i.U =/= enq_ptr && !r_col_done && io.read.request.valid
-            }
-            r_addr := r_col_count
             io.read.response.valid := RegNext(io.read.request.valid && !r_col_done)
         }
     }
