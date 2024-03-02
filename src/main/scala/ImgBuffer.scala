@@ -29,7 +29,7 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
     val dBanks = imgWidth * 8 / rWidth // depth of each bank in terms of rWidth 
     
     // COARSE counter tracking the number of columns writes for this row
-    val (w_col_count, w_col_done) = Counter(io.write.fire, 0 until imgWidth by 4)
+    val (w_col_count, w_col_done) = Counter(io.write.fire, imgWidth/4)
     // enq_ptr is the pointer to the bank that is currently being written to
     val (enq_ptr, _) = Counter(w_col_done, nBanks)
     // counter tracking the number of rows written
@@ -50,19 +50,27 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
     val r_datas = VecInit(Seq.fill(nRows){Wire(UInt(rWidth.W))})
     val (deq_ptr, _) = Counter(r_col_done, nBanks)
 
-    io.read.response.bits:= VecInit(0 until nRows map (i => (r_datas(deq_ptr + i)%nBanks).U))
-    io.read.request.ready := state === s_stable || state === s_tail
+    io.read.response.bits := VecInit(0 until nRows map (i => (r_datas(deq_ptr + i.U) % nBanks.U)))
+    io.read.request.ready := state === s_stable
+    
     // Generate NBanks SRAM Banks
-    val sram_banks = VecInit(Seq.fill(nBanks){SyncReadMem(dBanks, UInt(rWidth.W))})
-    foreach (sram_banks.zipWithIndex) { case (sram, i) =>
-        r_datas(i) := sram.readWrite(idx       = Mux(w_enable(i), w_addr, r_addr), 
-                                     writeData = w_serdes.io.narrow.bits, 
-                                     en        = w_enable(i) || r_enable(i),
-                                     isWrite   = w_enable(i))}
+    for (i <- 0 until nBanks) {
+        val sram = SyncReadMem(dBanks, UInt(rWidth.W))
+        // equivalent to this statement, which is not available in chisel 3.6
+        // r_datas(i) := sram.readWrite(idx       = Mux(w_enable(i), w_addr, r_addr), 
+        //                              writeData = w_serdes.io.narrow.bits, 
+        //                              en        = w_enable(i) || r_enable(i),
+        //                              isWrite   = w_enable(i))
+        r_datas(i) := DontCare
+        when (w_enable(i) || r_enable(i)){
+            val rdwrPort = sram(Mux(w_enable(i), w_addr, r_addr))
+            when (w_enable(i)) {rdwrPort := w_serdes.io.narrow.bits}
+            .otherwise {r_datas(i) := rdwrPort}
+        }
+    }
 
     // state machine
     val s_idle :: s_fill :: s_stable :: Nil = Enum(3)
-
     val state = RegInit(s_idle)
     switch(state){
         // wait for write
@@ -92,5 +100,3 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
         }
     }
 }
-
-

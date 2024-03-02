@@ -20,7 +20,7 @@ case class RevelioParams(
     useSRAM: Boolean = true,
 ){
     require(fuDepth % 4 == 0, "The depth of the functional units must be a multiple of 4")
-    require(Seq("SAD", "SSD", "NCC").contains(costFunction), "The cost function must be one of SAD, SSD, NCC")
+    require(Seq("SAD", "SSD", "NCC").contains(costFunct), "The cost function must be one of SAD, SSD, NCC")
     require(imgWidth % 4 == 0, "The width of the image must be a multiple of 4bytes, 32 bits")
     def numBlocksPerIter: Int = fuDepth / blockSize
 }
