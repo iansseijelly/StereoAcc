@@ -81,7 +81,7 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
     io.read.response.bits := VecInit(0 until nRows map (i => (r_datas(deq_ptr + i.U) % nBanks.U)))
     io.read.response.valid := state === s_stable && RegNext(io.read.request.valid && !r_col_wrap)
     w_des.io.narrow.ready := Mux(state === s_idle || state === s_fill, true.B, 
-                                    Mux(state === s_stable, w_col_done && !w_row_done, false.B))    
+                                    Mux(state === s_stable, !w_col_done && !w_row_done, false.B))    
 
     // Generate NBanks SRAM Banks
     for (i <- 0 until nBanks) {
@@ -120,8 +120,12 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
         // write one bank, waiting for one full row read 
         is(s_stable){
             state := Mux(r_row_wrap, s_idle, s_stable)
-            when(w_col_wrap) {w_col_done := false.B}
-            when(r_col_wrap) {w_col_done := true.B}
+            when(w_col_wrap) {w_col_done := true.B}
+            when(r_col_wrap) {r_col_done := true.B}
+            when(w_col_done && r_col_done) {
+                w_col_done := false.B
+                r_col_done := false.B
+            }
             when (w_row_wrap) {w_row_done := true.B}
         }
     }
