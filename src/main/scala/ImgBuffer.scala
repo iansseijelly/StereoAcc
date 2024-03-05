@@ -44,6 +44,7 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
             }
         }
     })
+    
     val nBanks = nRows + 1 // an extra bank for the write
     val dBanks = imgWidth * 8 / rWidth // depth of each bank in terms of rWidth 
 
@@ -52,7 +53,7 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
     val w_col_done = RegInit(false.B)
     val w_row_done = RegInit(false.B)
     val r_col_done = RegInit(false.B)
-    io.read.request.ready := state === s_stable
+    io.read.request.ready := state === s_stable && !r_col_done
     
     val w_enable = Wire(Vec(nBanks, Bool()))
     val r_enable = Wire(Vec(nBanks, Bool()))
@@ -77,7 +78,7 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
     for (i <- 0 until nBanks) {
         w_enable(i) := i.U === enq_ptr && w_des.io.narrow.fire
         //FIXME: overflown at deq_ptr == 4
-        r_enable(i) := state === s_stable && i.U =/= ((deq_ptr+(nBanks-1).U)%nBanks.U) && !r_col_done && io.read.request.valid
+        r_enable(i) := state === s_stable && i.U =/= ((deq_ptr+&(nBanks-1).U)%nBanks.U) && !r_col_done && io.read.request.valid
     }
 
     io.read.response.bits := VecInit(0 until nRows map (i => (r_datas((deq_ptr + i.U) % nBanks.U))))
