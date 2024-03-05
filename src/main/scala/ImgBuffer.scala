@@ -53,6 +53,7 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
     val w_col_done = RegInit(false.B)
     val w_row_done = RegInit(false.B)
     val r_col_done = RegInit(false.B)
+    val r_row_done = RegInit(false.B)
     io.read.request.ready := state === s_stable && !r_col_done
     
     val w_enable = Wire(Vec(nBanks, Bool()))
@@ -70,7 +71,7 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
 
     // FINE counter tracking the read address
     val (r_col_count, r_col_wrap) = Counter(cond=r_enable.reduceTree(_|_), n=imgWidth)
-    val (r_row_count, r_row_wrap) = Counter(cond=r_col_wrap, n=imgHeight-nRows)
+    val (r_row_count, r_row_wrap) = Counter(cond=r_col_wrap, n=imgHeight-nRows+1)
     val r_addr = r_col_count
     val r_datas = Wire(Vec(nBanks, UInt(rWidth.W)))
     val (deq_ptr, _) = Counter(cond=RegNext(r_col_wrap), n=nBanks)
@@ -122,7 +123,7 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
 
         // write one bank, waiting for one full row read 
         is(s_stable){
-            state := Mux(r_row_wrap, s_idle, s_stable)
+            state := Mux(r_row_done&&w_row_done, s_idle, s_stable)
             when(w_col_wrap) {w_col_done := true.B}
             when(r_col_wrap) {r_col_done := true.B}
             when(w_col_done && r_col_done) {
@@ -130,6 +131,7 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
                 r_col_done := false.B
             }
             when (w_row_wrap) {w_row_done := true.B}
+            when (r_row_wrap) {r_row_done := true.B}
         }
     }
 }

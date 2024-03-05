@@ -83,8 +83,11 @@ class ImgBufferTest extends AnyFlatSpec with ChiselScalatestTester {
                     }
                     println(s"Write $i")
                     c.clock.step() 
+                    c.io.write.valid.poke(false.B)
+                    c.clock.step()
                 }
             }
+            c.io.read.request.
         }
     }
 
