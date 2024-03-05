@@ -54,6 +54,9 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
     val r_col_done = RegInit(false.B)
     io.read.request.ready := state === s_stable
     
+    val w_enable = Wire(Vec(nBanks, Bool()))
+    val r_enable = Wire(Vec(nBanks, Bool()))
+
     val w_des = Module(new SerialWidthSlicer(narrowW=8, wideW=wWidth))
     w_des.io.wide <> io.write
     // FINE counter tracking the serial width slicer write address
@@ -65,21 +68,20 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
     val (w_row_count, w_row_wrap) = Counter(cond=w_col_wrap, n=imgHeight)
 
     // FINE counter tracking the read address
-    val (r_col_count, r_col_wrap) = Counter(cond=io.read.response.valid, n=imgWidth)
+    val (r_col_count, r_col_wrap) = Counter(cond=r_enable.reduceTree(_|_), n=imgWidth)
     val (r_row_count, r_row_wrap) = Counter(cond=r_col_wrap, n=imgHeight-nRows)
     val r_addr = r_col_count
     val r_datas = Wire(Vec(nBanks, UInt(rWidth.W)))
-    val (deq_ptr, _) = Counter(cond=r_col_wrap, n=nBanks)
+    val (deq_ptr, _) = Counter(cond=RegNext(r_col_wrap), n=nBanks)
 
-    val w_enable = Wire(Vec(nBanks, Bool()))
-    val r_enable = Wire(Vec(nBanks, Bool()))
     for (i <- 0 until nBanks) {
         w_enable(i) := i.U === enq_ptr && w_des.io.narrow.fire
-        r_enable(i) := state === s_stable && i.U =/= enq_ptr && !r_col_done && io.read.request.valid
+        //FIXME: overflown at deq_ptr == 4
+        r_enable(i) := state === s_stable && i.U =/= ((deq_ptr+(nBanks-1).U)%nBanks.U) && !r_col_done && io.read.request.valid
     }
 
-    io.read.response.bits := VecInit(0 until nRows map (i => (r_datas(deq_ptr + i.U) % nBanks.U)))
-    io.read.response.valid := state === s_stable && RegNext(io.read.request.valid && !r_col_wrap)
+    io.read.response.bits := VecInit(0 until nRows map (i => (r_datas((deq_ptr + i.U) % nBanks.U))))
+    io.read.response.valid := state === s_stable && RegNext(io.read.request.valid && !r_col_done)
     w_des.io.narrow.ready := Mux(state === s_idle || state === s_fill, true.B, 
                                     Mux(state === s_stable, !w_col_done && !w_row_done, false.B))    
 
@@ -107,7 +109,7 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
             // arch state initialization
             enq_ptr := 0.U
             deq_ptr := 0.U
-            w_col_done := io.write.fire
+            w_col_done := false.B
             w_row_done := false.B
             r_col_done := false.B
         }
