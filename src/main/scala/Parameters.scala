@@ -18,9 +18,12 @@ case class RevelioParams(
     imgHeight: Int = 375,
     // Use SRAM for the row buffer
     useSRAM: Boolean = true,
+    // search range
+    searchRange : Int = 16
 ){
     require(fuDepth % 4 == 0, "The depth of the functional units must be a multiple of 4")
-    require(Seq("SAD", "SSD", "NCC").contains(costFunct), "The cost function must be one of SAD, SSD, NCC")
+    require(Seq("SAD", "SSD", "NCC", "EU_SAD").contains(costFunct), "The cost function must be one of SAD, SSD, NCC")
     require(imgWidth % 4 == 0, "The width of the image must be a multiple of 4bytes, 32 bits")
+    require(searchRange < imgWidth, "The search range must be less than the width of the image")
     def numBlocksPerIter: Int = fuDepth / blockSize
 }
