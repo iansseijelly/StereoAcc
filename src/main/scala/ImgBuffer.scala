@@ -40,7 +40,7 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
             }
             val response = new Bundle {
                 val valid = Output(Bool())
-                val bits = Vec(nRows, UInt(rWidth.W))
+                val bits = Output(Vec(nRows, UInt(rWidth.W)))
             }
         }
     })
@@ -78,7 +78,6 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
 
     for (i <- 0 until nBanks) {
         w_enable(i) := i.U === enq_ptr && w_des.io.narrow.fire
-        //FIXME: overflown at deq_ptr == 4
         r_enable(i) := state === s_stable && i.U =/= ((deq_ptr+&(nBanks-1).U)%nBanks.U) && !r_col_done && io.read.request.valid
     }
 

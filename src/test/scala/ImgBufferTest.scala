@@ -6,8 +6,6 @@ import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
 import treadle.executable.Big
 
-
-
 class ImgBufferTest extends AnyFlatSpec with ChiselScalatestTester {
 
     val BLOCKSIZE: Int = 4
