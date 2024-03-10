@@ -13,9 +13,9 @@ case class RevelioParams(
     // The cost function used
     costFunct: String = "SAD",
     // The width of the target image
-    imgWidth: Int = 450,
+    imgWidth: Int = 640,
     // The height of the target image
-    imgHeight: Int = 375,
+    imgHeight: Int = 480,
     // Use SRAM for the row buffer
     useSRAM: Boolean = true,
     // search range

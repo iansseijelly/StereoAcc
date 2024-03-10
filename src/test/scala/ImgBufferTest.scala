@@ -4,7 +4,6 @@ import chisel3._
 import chisel3.util._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
-import treadle.executable.Big
 
 class ImgBufferTest extends AnyFlatSpec with ChiselScalatestTester {
 
@@ -52,8 +51,7 @@ class ImgBufferTest extends AnyFlatSpec with ChiselScalatestTester {
                 c.clock.step()
             }
             c.io.write.valid.poke(false.B)
-            // c.io.write.ready.expect(false.B)
-            println("Stable state reached!")
+            // println("Stable state reached!")
             for (i <- 0 until 32-(BLOCKSIZE)){
                 for (j <- 0 until 32){
                     val index = (i*32+j)
@@ -112,8 +110,7 @@ class ImgBufferTest extends AnyFlatSpec with ChiselScalatestTester {
                 c.clock.step()
             }
             c.io.write.valid.poke(false.B)
-            // c.io.write.ready.expect(false.B)
-            println("Stable state reached!")
+            // println("Stable state reached!")
             for (i <- 0 until 32-(BLOCKSIZE+1)){
                 // read request
                 for (j <- 0 until 32){

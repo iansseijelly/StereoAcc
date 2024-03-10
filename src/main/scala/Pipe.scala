@@ -10,7 +10,7 @@ abstract class AnyPipeModule (val param: RevelioParams) extends Module {
             val valid = Input(Bool())
         }
         val w_circular = new Bundle{
-            val data = Output(Vec(param.blockSize, UInt(8.W)))
+            val data = Input(Vec(param.blockSize, UInt(8.W)))
             val valid = Input(Bool())
         }
         val output = Decoupled(UInt(8.W))
@@ -45,21 +45,25 @@ class EU_ADPE extends Module {
         val B = Input(UInt(8.W))
         val AD = Output(UInt(8.W))
     })
+    val A_s = io.A.asSInt
+    val B_s = io.B.asSInt
     val AB = Wire(SInt(8.W))
-    AB := io.A -% io.B // without width expansion
+    AB := A_s -% B_s // without width expansion
     val BA = Wire(SInt(8.W))
-    BA := io.B -% io.A
-    io.AD := Mux(AB(7), BA, AB)
+    BA := B_s -% A_s
+    io.AD := Mux(AB(7), BA, AB).asUInt
+    assert(io.AD(7) === 0.U) // must be positive
 }
 
 class SADPipe(param: RevelioParams) extends AnyPipeModule(param) {
 
     val SAD = Wire(UInt(32.W))
     SAD := VecInit.tabulate(param.blockSize^2){i => 
-        val j = i % param.blockSize
+        val x = i % param.blockSize
+        val y = i / param.blockSize
         val adpe = Module(new EU_ADPE)
-        adpe.io.A := stationary_reg(i)(j)
-        adpe.io.B := circular_reg(i)(j)
+        adpe.io.A := stationary_reg(y)(x)
+        adpe.io.B := circular_reg(y)(x)
         val ad = adpe.io.AD
         ad
     }.reduceTree(_+&_)
@@ -67,11 +71,7 @@ class SADPipe(param: RevelioParams) extends AnyPipeModule(param) {
     val min_SAD = RegInit(0xFFFFFFFFL.U(32.W))
     val valid_compute = RegNext(io.w_circular.valid && c_full)
 
-    when (valid_compute) {
-        when (SAD < min_SAD) {
-            min_SAD := SAD
-        }
-    }
+    when (valid_compute && (SAD < min_SAD)) {min_SAD := SAD}
 
     io.output.bits := min_SAD
     io.output.valid := c_done
