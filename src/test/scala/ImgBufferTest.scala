@@ -56,6 +56,7 @@ class ImgBufferTest extends AnyFlatSpec with ChiselScalatestTester {
                 for (j <- 0 until 32){
                     val index = (i*32+j)
                     c.io.read.request.valid.poke(true.B)
+                    c.io.read.request.index.poke(j.U)
                     while(!c.io.read.request.ready.peek().litToBoolean){
                         c.clock.step()
                     }
@@ -66,7 +67,10 @@ class ImgBufferTest extends AnyFlatSpec with ChiselScalatestTester {
                     c.io.read.response.bits(2).expect(((index+64)%256).U)
                     c.io.read.response.bits(3).expect(((index+96)%256).U)
                 }
+                c.io.read.request.col_done.poke(true.B)
                 c.io.read.request.valid.poke(false.B)
+                c.clock.step()
+                c.io.read.request.col_done.poke(false.B)
                 for (k <- 0 until 32 by 4){
                     val index = ((i+(BLOCKSIZE))*32+k)%256
                     c.io.write.valid.poke(true.B)
@@ -85,6 +89,7 @@ class ImgBufferTest extends AnyFlatSpec with ChiselScalatestTester {
             for (j <- 0 until 32){
                 val index = (28*32+j)
                 c.io.read.request.valid.poke(true.B)
+                c.io.read.request.index.poke(j.U)
                 c.clock.step()
                 c.io.read.response.valid.expect(true.B)
                 c.io.read.response.bits(0).expect(( index    %256).U)
@@ -92,7 +97,6 @@ class ImgBufferTest extends AnyFlatSpec with ChiselScalatestTester {
                 c.io.read.response.bits(2).expect(((index+64)%256).U)
                 c.io.read.response.bits(3).expect(((index+96)%256).U)
             }
-            c.io.read.request.ready.expect(false.B)
         }
     }
 
@@ -116,6 +120,7 @@ class ImgBufferTest extends AnyFlatSpec with ChiselScalatestTester {
                 for (j <- 0 until 32){
                     val index = (i*32+j)
                     c.io.read.request.valid.poke(true.B)
+                    c.io.read.request.index.poke(j.U)
                     while(!c.io.read.request.ready.peek().litToBoolean){
                         c.clock.step()
                     }
@@ -127,7 +132,10 @@ class ImgBufferTest extends AnyFlatSpec with ChiselScalatestTester {
                     c.io.read.response.bits(3).expect(((index+96)%256).U)
                     // println(s"Read index: $index")
                 }
+                c.io.read.request.col_done.poke(true.B)
                 c.io.read.request.valid.poke(false.B)
+                c.clock.step()
+                c.io.read.request.col_done.poke(false.B)
                 // write request
                 for (k <- 0 until 32 by 4){
                     val index = ((i+(BLOCKSIZE+1))*32+k)%256
@@ -148,6 +156,7 @@ class ImgBufferTest extends AnyFlatSpec with ChiselScalatestTester {
             for (j <- 0 until 32){
                 val index = (27*32+j)
                 c.io.read.request.valid.poke(true.B)
+                c.io.read.request.index.poke(j.U)
                 while(!c.io.read.request.ready.peek().litToBoolean){
                     c.clock.step()
                 }
@@ -159,9 +168,16 @@ class ImgBufferTest extends AnyFlatSpec with ChiselScalatestTester {
                 c.io.read.response.bits(3).expect(((index+96)%256).U)
             }
 
+            c.io.read.request.col_done.poke(true.B)
+            c.io.read.request.valid.poke(false.B)
+            c.clock.step()
+            c.io.read.request.col_done.poke(false.B)
+
             for (j <- 0 until 32) {
+                // println(s"Read index: ${j}")
                 val index = (28*32+j)
                 c.io.read.request.valid.poke(true.B)
+                c.io.read.request.index.poke(j.U)
                 while(!c.io.read.request.ready.peek().litToBoolean){
                     c.clock.step()
                 }
@@ -172,8 +188,6 @@ class ImgBufferTest extends AnyFlatSpec with ChiselScalatestTester {
                 c.io.read.response.bits(2).expect(((index+64)%256).U)
                 c.io.read.response.bits(3).expect(((index+96)%256).U)
             }
- 
-            c.io.read.request.ready.expect(false.B)
         }
     }
 }

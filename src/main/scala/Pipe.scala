@@ -6,7 +6,7 @@ import chisel3.util._
 abstract class AnyPipeModule (val param: RevelioParams) extends Module {
     val io = IO(new Bundle {
         val w_stationary = new Bundle{
-            val data = Input(UInt((param.blockSize*8).W)) //write one column
+            val data = Input(Vec(param.blockSize, UInt(8.W)))
             val valid = Input(Bool())
         }
         val w_circular = new Bundle{
@@ -27,16 +27,15 @@ abstract class AnyPipeModule (val param: RevelioParams) extends Module {
     val c_done = RegInit(false.B)
     val c_full = RegInit(false.B)
 
-    when (io.w_stationary.valid) {
-        for (i <- 0 until param.blockSize) {
-            stationary_reg(i)(s_w_count) := io.w_stationary.data((i+1)*8-1, i*8)
-        }
-    }
+    when (io.w_stationary.valid){stationary_reg(s_w_count) := io.w_stationary.data}
     when (s_w_wrap) {s_w_done := true.B}
     
     when (io.w_circular.valid) {circular_reg(c_enq_ptr) := io.w_circular.data}
     when (c_enq_wrap) {c_full := true.B}
     when (c_w_wrap) {c_done := true.B}
+
+    // c must not be full when s is not done
+    assert(!(!s_w_done && c_full), "c must not be full when s is not done")
 }
 
 class SADPipe(param: RevelioParams) extends AnyPipeModule(param) {

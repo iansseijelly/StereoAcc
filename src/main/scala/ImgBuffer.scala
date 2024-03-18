@@ -37,6 +37,9 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
             val request = new Bundle {
                 val valid = Input(Bool())
                 val ready = Output(Bool())
+                val index = Input(UInt(log2Ceil(imgWidth).W))
+                // pulsify this signal!
+                val col_done = Input(Bool())
             }
             val response = new Bundle {
                 val valid = Output(Bool())
@@ -70,11 +73,10 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
     val (w_row_count, w_row_wrap) = Counter(cond=w_col_wrap, n=imgHeight)
 
     // FINE counter tracking the read address
-    val (r_col_count, r_col_wrap) = Counter(cond=r_enable.reduceTree(_|_), n=imgWidth)
-    val (r_row_count, r_row_wrap) = Counter(cond=r_col_wrap, n=imgHeight-nRows+1)
-    val r_addr = r_col_count
+    val (r_row_count, r_row_wrap) = Counter(cond=io.read.request.col_done, n=imgHeight-nRows+1)
+    val r_addr = io.read.request.index
     val r_datas = Wire(Vec(nBanks, UInt(rWidth.W)))
-    val (deq_ptr, _) = Counter(cond=RegNext(r_col_wrap), n=nBanks)
+    val (deq_ptr, _) = Counter(cond=RegNext(io.read.request.col_done), n=nBanks)
 
     for (i <- 0 until nBanks) {
         w_enable(i) := i.U === enq_ptr && w_des.io.narrow.fire
@@ -124,7 +126,7 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
         is(s_stable){
             state := Mux(r_row_done&&w_row_done, s_idle, s_stable)
             when(w_col_wrap) {w_col_done := true.B}
-            when(r_col_wrap) {r_col_done := true.B}
+            when(io.read.request.col_done) {r_col_done := true.B}
             when(w_col_done && r_col_done) {
                 w_col_done := false.B
                 r_col_done := false.B
