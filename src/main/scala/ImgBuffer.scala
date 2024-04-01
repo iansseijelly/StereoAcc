@@ -3,27 +3,6 @@ package revelio
 import chisel3._
 import chisel3.util._
 
-// from testchipip/Utils.scala
-class SerialWidthSlicer(narrowW: Int, wideW: Int) extends Module {
-  require(wideW > narrowW)
-  require(wideW % narrowW == 0)
-  val io = IO(new Bundle {
-    val wide   = Flipped(Decoupled(UInt(wideW.W)))
-    val narrow = Decoupled(UInt(narrowW.W))
-  })
-
-  val beats = wideW / narrowW
-  val wide_beats = RegInit(0.U(log2Ceil(beats).W))
-  val wide_last_beat = wide_beats === (beats-1).U
-
-  io.narrow.valid := io.wide.valid
-  io.narrow.bits := io.wide.bits.asTypeOf(Vec(beats, UInt(narrowW.W)))(wide_beats)
-  when (io.narrow.fire) {
-    wide_beats := Mux(wide_last_beat, 0.U, wide_beats + 1.U)
-  }
-  io.wide.ready := wide_last_beat && io.narrow.ready
-}
-
 class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) extends Module {
 
     val rWidth : Int = 8

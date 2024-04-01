@@ -9,7 +9,7 @@ case class RevelioParams(
     // The number of the functional units
     fuWidth: Int = 4,
     // The depth of the functional units (number of blocks computed per cycle)
-    fuDepth: Int = 8,
+    // fuDepth: Int = 8,
     // The cost function used
     costFunct: String = "SAD",
     // The width of the target image
@@ -21,9 +21,11 @@ case class RevelioParams(
     // search range
     searchRange : Int = 16
 ){
-    require(fuDepth % 4 == 0, "The depth of the functional units must be a multiple of 4")
+    // require(fuDepth % 4 == 0, "The depth of the functional units must be a multiple of 4")
     require(Seq("SAD", "SSD", "NCC", "EU_SAD").contains(costFunct), "The cost function must be one of SAD, SSD, NCC")
     require(imgWidth % 4 == 0, "The width of the image must be a multiple of 4bytes, 32 bits")
     require(searchRange < imgWidth, "The search range must be less than the width of the image")
-    def numBlocksPerIter: Int = fuDepth / blockSize
+    require(fuWidth % 4 == 0, "The width of the functional units must be a multiple of 4")
+    // def numBlocksPerIter: Int = fuDepth / blockSize
+    def numIterPerRow: Int = (imgWidth-blockSize)/fuWidth
 }

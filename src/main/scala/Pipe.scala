@@ -23,9 +23,13 @@ abstract class AnyPipeModule (val param: RevelioParams) extends Module {
     val s_w_done = RegInit(false.B)
 
     val (c_enq_ptr, c_enq_wrap) = Counter(io.w_circular.valid, param.blockSize)
-    val (c_w_count, c_w_wrap) = Counter(io.w_circular.valid, param.searchRange)
+    // always dequeue the LATEST data
+    val c_deq_ptr = c_enq_ptr + param.blockSize.U - 1.U
+    val (c_w_count, c_w_wrap) = Counter(io.w_circular.valid, param.searchRange + param.blockSize)
     val c_done = RegInit(false.B)
     val c_full = RegInit(false.B)
+
+    val do_compute = RegNext(io.w_circular.valid && c_full)
 
     when (io.w_stationary.valid){stationary_reg(s_w_count) := io.w_stationary.data}
     when (s_w_wrap) {s_w_done := true.B}
@@ -52,9 +56,8 @@ class SADPipe(param: RevelioParams) extends AnyPipeModule(param) {
     }.reduceTree(_+&_)
 
     val min_SAD = RegInit(0xFFFFFFFFL.U(32.W))
-    val valid_compute = RegNext(io.w_circular.valid && c_full)
 
-    when (valid_compute && (SAD < min_SAD)) {min_SAD := SAD}
+    when (do_compute && (SAD < min_SAD)) {min_SAD := SAD}
 
     io.output.bits := min_SAD
     io.output.valid := c_done
