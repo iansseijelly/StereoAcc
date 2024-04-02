@@ -3,18 +3,20 @@ package revelio
 import chisel3._
 import chisel3.util._
 
+class pipebundle (val param: RevelioParams) extends Bundle {
+    val w_stationary = new Bundle{
+        val data = Input(Vec(param.blockSize, UInt(8.W)))
+        val valid = Input(Bool())
+    }
+    val w_circular = new Bundle{
+        val data = Input(Vec(param.blockSize, UInt(8.W)))
+        val valid = Input(Bool())
+    }
+    val output = Decoupled(UInt(8.W))
+}
+
 abstract class AnyPipeModule (val param: RevelioParams) extends Module {
-    val io = IO(new Bundle {
-        val w_stationary = new Bundle{
-            val data = Input(Vec(param.blockSize, UInt(8.W)))
-            val valid = Input(Bool())
-        }
-        val w_circular = new Bundle{
-            val data = Input(Vec(param.blockSize, UInt(8.W)))
-            val valid = Input(Bool())
-        }
-        val output = Decoupled(UInt(8.W))
-    })
+    val io = IO(new pipebundle(param))
 
     val stationary_reg = RegInit(VecInit.fill(param.blockSize, param.blockSize)(0.U(8.W)))
     val circular_reg = RegInit(VecInit.fill(param.blockSize, param.blockSize)(0.U(8.W)))

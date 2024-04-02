@@ -15,24 +15,9 @@ class StereoAcc(params: RevelioParams) extends Module {
     val rightImgBuffer = Module (new SRAMImgBuffer(params.blockSize, params.imgWidth, params.imgHeight))
 
     // *** pipes ***//
-    val pipebundle = new Bundle{
-        val w_stationary = new Bundle{
-            val data = Input(Vec(params.blockSize, UInt(8.W)))
-            val valid = Input(Bool())
-        }
-        val w_circular = new Bundle{
-            val data = Input(Vec(params.blockSize, UInt(8.W)))
-            val valid = Input(Bool())
-        }
-        val output = Decoupled(UInt(8.W))
-    }
-    val pipeio = VecInit(Seq.fill(params.fuWidth)(Wire(pipebundle)))
-
-    for (i <- 0 until params.fuWidth) {
+    val pipeio = Seq.fill(params.fuWidth) {
         val SADPipe = Module(new SADPipe(params))
-        SADPipe.io.w_stationary <> pipeio(i).w_stationary
-        SADPipe.io.w_circular <> pipeio(i).w_circular
-        pipeio(i).output <> SADPipe.io.output
+        SADPipe.io
     }
 
     // *** write arbiter ***//
@@ -50,8 +35,8 @@ class StereoAcc(params: RevelioParams) extends Module {
     // *** output aggregator ***//
     val des = Module(new SerialWidthAggregator(narrowW=8, wideW=32))
     val (deq_ptr, deq_wrap) = Counter(des.io.narrow.fire, params.fuWidth)
-    des.io.narrow.valid := pipeio(deq_ptr).output.valid
-    des.io.narrow.bits := pipeio(deq_ptr).output.bits
+    des.io.narrow.valid := VecInit(pipeio.map(_.output.valid))(deq_ptr)
+    des.io.narrow.bits := VecInit(pipeio.map(_.output.bits))(deq_ptr)
     io.deq <> des.io.wide
     pipeio.zipWithIndex.foreach{
         case (o, i) => {
