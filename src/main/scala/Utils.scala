@@ -47,12 +47,8 @@ class SerialWidthAggregator(narrowW: Int, wideW: Int) extends Module {
   io.wide.bits := Cat(io.narrow.bits, narrow_data.asUInt)
 }
 
-class PulseReg() extends Module {
-  val io = IO(new Bundle {
-    val in = Input(Bool())
-    val out = Output(Bool())
-  })
-  val reg = RegInit(false.B)
-  io.out := reg
-  reg := Mux(reg, false.B, io.in)
+object Pulsify {
+  def apply(in: Bool): Unit = {
+    when(in) {in := false.B}
+  }
 }

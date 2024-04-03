@@ -55,17 +55,18 @@ class StereoAcc(params: RevelioParams) extends Module {
     val (l_col_count, l_col_wrap) = Counter(l_offset_wrap, params.numIterPerRow)
     val column_done = RegInit(false.B)
     when (l_col_wrap) {column_done := true.B}
-    val pulse_col_done = Module(new PulseReg)
-    pulse_col_done.io.in := column_done
+    Pulsify(column_done)
 
     def do_compute = state === s_stable
     val read_index = l_col_count + l_offset_count
 
     // mux the data into the pipeios
     for (i <- 0 until params.fuWidth) {
-        pipeio(i).w_stationary.valid := Mux((i.U<=l_offset_response_count) && (l_offset_response_count<(i+params.blockSize).U), leftImgBuffer.io.read.response.valid, 0.U)
+        pipeio(i).w_stationary.valid := Mux((i.U<=l_offset_response_count) && (l_offset_response_count<(i+params.blockSize).U),
+                                            leftImgBuffer.io.read.response.valid, 0.U)
         pipeio(i).w_stationary.data := leftImgBuffer.io.read.response.bits
-        pipeio(i).w_circular.valid := Mux((i.U<=l_offset_response_count) && (l_offset_response_count<(i+params.searchRange+params.blockSize).U), rightImgBuffer.io.read.response.valid, 0.U)
+        pipeio(i).w_circular.valid := Mux((i.U<=l_offset_response_count) && (l_offset_response_count<(i+params.searchRange+params.blockSize).U),
+                                            rightImgBuffer.io.read.response.valid, 0.U)
         pipeio(i).w_circular.data := rightImgBuffer.io.read.response.bits
     }
 
@@ -73,8 +74,8 @@ class StereoAcc(params: RevelioParams) extends Module {
     leftImgBuffer.io.read.request.index := read_index
     rightImgBuffer.io.read.request.index := read_index
     
-    leftImgBuffer.io.read.request.col_done := pulse_col_done.io.out
-    rightImgBuffer.io.read.request.col_done := pulse_col_done.io.out
+    leftImgBuffer.io.read.request.col_done := column_done
+    rightImgBuffer.io.read.request.col_done := column_done
     
     leftImgBuffer.io.read.request.valid := do_compute && (l_offset_count < (params.blockSize+params.fuWidth).U)
     rightImgBuffer.io.read.request.valid := do_compute
