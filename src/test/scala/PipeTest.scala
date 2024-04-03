@@ -1,4 +1,4 @@
-package revelio
+package stereoacc
 
 import chisel3._
 import chisel3.util._
@@ -8,7 +8,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 class PipeTest extends AnyFlatSpec with ChiselScalatestTester {
     behavior of "Pipe"
     it should "instantiate SADPipe" in {
-        test(new SADPipe(RevelioParams())) { c =>
+        test(new SADPipe(StereoAccParams())) { c =>
             c.clock.step()
             println("Instantiation successful!")
         }
@@ -18,7 +18,7 @@ class PipeTest extends AnyFlatSpec with ChiselScalatestTester {
         val test_blocksize = 4
         val test_imgWidth = 64
         val searchRange = 8
-        test (new SADPipe(RevelioParams(blockSize = test_blocksize, searchRange = searchRange))).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
+        test (new SADPipe(StereoAccParams(blockSize = test_blocksize, searchRange = searchRange))).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
             for (i <- 0 until test_blocksize) {
                 for (j <- 0 until test_blocksize) {
                     c.io.w_stationary.data(j).poke(i.U)

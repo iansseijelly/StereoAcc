@@ -1,10 +1,10 @@
-package revelio
+package stereoacc
 
 import chisel3._
 import chisel3.util._
 import freechips.rocketchip.util.RotateVector
 
-class StereoAcc(params: RevelioParams) extends Module {
+class StereoAcc(params: StereoAccParams) extends Module {
     val io = IO(new Bundle {
         val enq = Flipped(Decoupled(UInt(32.W)))
         val deq = Decoupled(UInt(32.W))

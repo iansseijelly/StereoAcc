@@ -1,9 +1,9 @@
-package revelio
+package stereoacc
 
 import chisel3._
 import chisel3.util._
 
-class Circular_ShiftReg(val param: RevelioParams) extends Module {
+class Circular_ShiftReg(val param: StereoAccParams) extends Module {
     val io = IO(new Bundle {
         val input_data = Input(Vec(param.blockSize, UInt(8.W)))
         val input_valid = Input(Bool())
@@ -19,7 +19,7 @@ class Circular_ShiftReg(val param: RevelioParams) extends Module {
     io.data := shift_reg
 }
 
-abstract class AnyPipeModule (val param: RevelioParams) extends Module {
+abstract class AnyPipeModule (val param: StereoAccParams) extends Module {
         val io = IO(new Bundle {
             val w_stationary = new Bundle{
             val data = Input(Vec(param.blockSize, UInt(8.W)))
@@ -58,7 +58,7 @@ abstract class AnyPipeModule (val param: RevelioParams) extends Module {
     assert(!(!s_w_done && c_full), "c must not be full when s is not done")
 }
 
-class SADPipe(param: RevelioParams) extends AnyPipeModule(param) {
+class SADPipe(param: StereoAccParams) extends AnyPipeModule(param) {
 
     val SAD = Wire(UInt(32.W))
     SAD := VecInit.tabulate(param.blockSize*param.blockSize){i => 

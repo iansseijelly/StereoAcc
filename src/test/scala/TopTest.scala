@@ -1,4 +1,4 @@
-package revelio
+package stereoacc
 
 import chisel3._
 import chisel3.util._
@@ -29,14 +29,14 @@ class TopTest extends AnyFlatSpec with ChiselScalatestTester {
 
     behavior of "StereoAcc"
     it should "instantiate StereoAcc" in {
-        test(new StereoAcc(RevelioParams())) { c =>
+        test(new StereoAcc(StereoAccParams())) { c =>
             c.clock.step()
             println("Instantiation successful!")
         }
     }
 
     it should "do some computation" in {
-        test (new StereoAcc(RevelioParams(blockSize = BLOCKSIZE, imgWidth = IMGWIDTH, imgHeight = IMGHEIGHT, searchRange = SEARCHRANGE))).
+        test (new StereoAcc(StereoAccParams(blockSize = BLOCKSIZE, imgWidth = IMGWIDTH, imgHeight = IMGHEIGHT, searchRange = SEARCHRANGE))).
             withAnnotations(Seq(WriteVcdAnnotation)) { c =>
             for (j <- 0 until 2*4*IMGWIDTH by 4) {
                 c.io.enq.valid.poke(true.B)

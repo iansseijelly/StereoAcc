@@ -1,9 +1,9 @@
-package revelio
+package stereoacc
 
 import chisel3._
 import chisel3.util._
 
-case class RevelioParams(
+case class StereoAccParams(
     // The size of matching block in pixels(bytes)
     blockSize: Int = 8,
     // The number of the functional units
