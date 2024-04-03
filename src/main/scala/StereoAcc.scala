@@ -24,7 +24,7 @@ class StereoAcc(params: RevelioParams) extends Module {
     // true for right, false for left
     val w_right_sel = RegInit(false.B)
     // this counter tracks when to switch between left and right
-    val (w_count, w_wrap) = Counter(io.enq.fire, params.imgWidth*32/8)
+    val (w_count, w_wrap) = Counter(io.enq.fire, params.imgWidth/32*8)
     when (w_wrap) {w_right_sel := ~w_right_sel}
     leftImgBuffer.io.write.valid := io.enq.valid && !w_right_sel
     leftImgBuffer.io.write.bits := io.enq.bits
@@ -45,26 +45,27 @@ class StereoAcc(params: RevelioParams) extends Module {
     }
 
     // *** compute state machine ***//
-    val s_idle :: s_fill :: s_stable :: s_tail :: Nil = Enum(4)
+    val s_idle :: s_stable :: s_tail :: Nil = Enum(3)
     val state = RegInit(s_idle)
 
     // the left fine counter tracking the offsets of the reads
-    val (l_offset_count, l_offset_wrap) = Counter(do_read, params.blockSize)
+    val (l_offset_count, l_offset_wrap) = Counter(do_compute, params.blockSize+params.fuWidth+params.searchRange)
+    val l_offset_response_count = RegNext(l_offset_count)
     // the left counter tracking how many left images have been read
     val (l_col_count, l_col_wrap) = Counter(l_offset_wrap, params.numIterPerRow)
-    // the right counter tracking the offsets of the right images
-    val (r_offset_count, r_offset_wrap) = Counter(do_compute, params.searchRange)
+    val column_done = RegInit(false.B)
+    when (l_col_wrap) {column_done := true.B}
+    val pulse_col_done = Module(new PulseReg)
+    pulse_col_done.io.in := column_done
 
-    def do_read = state === s_fill
     def do_compute = state === s_stable
-    val read_index = Mux(do_compute, l_col_count + params.blockSize.U + r_offset_count, 
-                        Mux(do_read, l_col_count + l_offset_count, 0.U))
+    val read_index = l_col_count + l_offset_count
 
     // mux the data into the pipeios
     for (i <- 0 until params.fuWidth) {
-        pipeio(i).w_stationary.valid := Mux(l_offset_count >= i.U, leftImgBuffer.io.read.response.valid && do_read, 0.U)
+        pipeio(i).w_stationary.valid := Mux((i.U<=l_offset_response_count) && (l_offset_response_count<(i+params.blockSize).U), leftImgBuffer.io.read.response.valid, 0.U)
         pipeio(i).w_stationary.data := leftImgBuffer.io.read.response.bits
-        pipeio(i).w_circular.valid := Mux((do_read && l_offset_count >= i.U) || do_compute, rightImgBuffer.io.read.response.valid, 0.U)
+        pipeio(i).w_circular.valid := Mux((i.U<=l_offset_response_count) && (l_offset_response_count<(i+params.searchRange+params.blockSize).U), rightImgBuffer.io.read.response.valid, 0.U)
         pipeio(i).w_circular.data := rightImgBuffer.io.read.response.bits
     }
 
@@ -72,29 +73,26 @@ class StereoAcc(params: RevelioParams) extends Module {
     leftImgBuffer.io.read.request.index := read_index
     rightImgBuffer.io.read.request.index := read_index
     
-    leftImgBuffer.io.read.request.col_done := state === s_tail
-    rightImgBuffer.io.read.request.col_done := state === s_tail
+    leftImgBuffer.io.read.request.col_done := pulse_col_done.io.out
+    rightImgBuffer.io.read.request.col_done := pulse_col_done.io.out
     
-    leftImgBuffer.io.read.request.valid := do_read
-    rightImgBuffer.io.read.request.valid := do_read || do_compute
+    leftImgBuffer.io.read.request.valid := do_compute && (l_offset_count < (params.blockSize+params.fuWidth).U)
+    rightImgBuffer.io.read.request.valid := do_compute
 
     switch(state) {
         // wait for both buffers to fill
         is(s_idle) {
-            when(leftImgBuffer.io.read.request.ready && rightImgBuffer.io.read.request.ready) {state := s_fill}
-        }
-        // fill in the pipes
-        is(s_fill) {
-            when (l_offset_wrap) {state := s_stable}
+            column_done := false.B
+            when(leftImgBuffer.io.read.request.ready && rightImgBuffer.io.read.request.ready) {state := s_stable}
         }
         // stably compute
         is(s_stable) {
-            when (r_offset_wrap) {state := Mux(l_col_wrap, s_tail, s_fill)}
+            when (l_offset_wrap) {state := s_tail}
         }
         // tail state, collect the output
         is(s_tail) {
             // hold the state until the output is collected
-            when (deq_wrap) {state := s_idle}
+            when (deq_wrap) {state := Mux(column_done, s_idle, s_stable)}
         }
     }
 }
