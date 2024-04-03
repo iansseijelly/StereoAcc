@@ -58,7 +58,7 @@ class StereoAcc(params: RevelioParams) extends Module {
     Pulsify(column_done)
 
     def do_compute = state === s_stable
-    val read_index = l_col_count + l_offset_count
+    val read_index = l_col_count +& l_offset_count
 
     // mux the data into the pipeios
     for (i <- 0 until params.fuWidth) {

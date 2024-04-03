@@ -53,8 +53,8 @@ class TopTest extends AnyFlatSpec with ChiselScalatestTester {
                     c.clock.step()
                 }
                 c.io.deq.ready.poke(true.B)
-                c.clock.step()
                 print_read_data(c.io.deq.bits.peek().litValue)
+                c.clock.step()
                 c.io.deq.ready.poke(false.B)
             }
             for (i <- 0 until ITER_COUNT) {
