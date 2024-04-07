@@ -3,7 +3,7 @@ package stereoacc
 import chisel3._
 import chisel3.util._
 
-class Any_ADPE extends Module{
+abstract class Any_ADPE extends Module{
     val io = IO(new Bundle{
         val A = Input(UInt(8.W))
         val B = Input(UInt(8.W))

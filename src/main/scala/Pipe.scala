@@ -22,14 +22,15 @@ class Circular_ShiftReg(val param: StereoAccParams) extends Module {
 abstract class AnyPipeModule (val param: StereoAccParams) extends Module {
         val io = IO(new Bundle {
             val w_stationary = new Bundle{
-            val data = Input(Vec(param.blockSize, UInt(8.W)))
-            val valid = Input(Bool())
-        }
-        val w_circular = new Bundle{
-            val data = Input(Vec(param.blockSize, UInt(8.W)))
-            val valid = Input(Bool())
-        }
-        val output = Decoupled(UInt(8.W)) 
+                val data = Input(Vec(param.blockSize, UInt(8.W)))
+                val valid = Input(Bool())
+            }
+            val w_circular = new Bundle{
+                val data = Input(Vec(param.blockSize, UInt(8.W)))
+                val valid = Input(Bool())
+            }
+            val output = Decoupled(UInt(8.W)
+        ) 
     })
 
     val stationary_reg = RegInit(VecInit.fill(param.blockSize, param.blockSize)(0.U(8.W)))
@@ -39,19 +40,17 @@ abstract class AnyPipeModule (val param: StereoAccParams) extends Module {
 
     val (s_w_count, s_w_wrap) = Counter(io.w_stationary.valid, param.blockSize)
     val s_w_done = RegInit(false.B)
+    when (s_w_wrap) {s_w_done := true.B}
 
-    val (c_enq_ptr, c_enq_wrap) = Counter(io.w_circular.valid, param.blockSize)
     val (c_w_count, c_w_wrap) = Counter(io.w_circular.valid, param.searchRange + param.blockSize)
     val c_w_done = RegInit(false.B)
+    when (c_w_wrap) {c_w_done := true.B}
     val c_full = RegInit(false.B)
 
     val do_compute = io.w_circular.valid && c_full
     
     when (io.w_stationary.valid){stationary_reg(s_w_count) := io.w_stationary.data}
-    when (s_w_wrap) {s_w_done := true.B}
     
-    when (c_enq_wrap) {c_full := true.B}
-    when (c_w_wrap) {c_w_done := true.B}
     val c_c_done = RegNext(c_w_done)
 
     // c must not be full when s is not done
@@ -67,8 +66,7 @@ class SADPipe(param: StereoAccParams) extends AnyPipeModule(param) {
         val adpe = Module(new EU_ADPE)
         adpe.io.A := stationary_reg(y)(x)
         adpe.io.B := circular_reg.io.data(y)(x)
-        val ad = adpe.io.AD
-        ad
+        adpe.io.AD
     }.reduceTree(_+&_)
 
     val min_SAD = RegInit(0xFFFFFFFFL.U(32.W))
@@ -90,7 +88,6 @@ class SADPipe(param: StereoAccParams) extends AnyPipeModule(param) {
         c_c_done := false.B
         c_full := false.B
         s_w_count := 0.U
-        c_enq_ptr := 0.U
         c_w_count := 0.U
     }
 }

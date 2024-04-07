@@ -2,9 +2,9 @@ package stereoacc
 
 import chisel3._
 import chisel3.util._
-import freechips.rocketchip.util.RotateVector
+import org.chipsalliance.cde.config.{Config, Parameters, Field}
 
-class StereoAcc(params: StereoAccParams) extends Module {
+class StereoAcc(params: StereoAccParams)(implicit p: Parameters) extends Module {
     val io = IO(new Bundle {
         val enq = Flipped(Decoupled(UInt(32.W)))
         val deq = Decoupled(UInt(32.W))

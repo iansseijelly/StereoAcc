@@ -47,6 +47,7 @@ class SerialWidthAggregator(narrowW: Int, wideW: Int) extends Module {
   io.wide.bits := Cat(io.narrow.bits, narrow_data.asUInt)
 }
 
+// from midas.pulsify
 object Pulsify {
   def apply(in: Bool): Unit = {
     when(in) {in := false.B}

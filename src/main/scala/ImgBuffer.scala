@@ -43,7 +43,7 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
 
     val w_des = Module(new SerialWidthSlicer(narrowW=8, wideW=wWidth))
     w_des.io.wide <> io.write
-    // FINE counter tracking the serial width slicer write address
+    // counter tracking the serial width slicer write address
     val (w_col_count, w_col_wrap) = Counter(cond=w_des.io.narrow.fire, n=imgWidth)
     val w_addr = w_col_count
     // enq_ptr is the pointer to the bank that is currently being written to
@@ -51,7 +51,7 @@ class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) exten
     // counter tracking the number of rows written
     val (w_row_count, w_row_wrap) = Counter(cond=w_col_wrap, n=imgHeight)
 
-    // FINE counter tracking the read address
+    // counter tracking the read address
     val (r_row_count, r_row_wrap) = Counter(cond=io.read.request.col_done, n=imgHeight-nRows+1)
     val r_addr = io.read.request.index
     val r_datas = Wire(Vec(nBanks, UInt(rWidth.W)))
