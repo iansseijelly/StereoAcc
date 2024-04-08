@@ -8,6 +8,7 @@ class StereoAcc(params: StereoAccParams)(implicit p: Parameters) extends Module 
     val io = IO(new Bundle {
         val enq = Flipped(Decoupled(UInt(32.W)))
         val deq = Decoupled(UInt(32.W))
+        val finished = Output(Bool())
     })
 
     // *** image buffers ***//
@@ -96,4 +97,8 @@ class StereoAcc(params: StereoAccParams)(implicit p: Parameters) extends Module 
             when (deq_wrap) {state := Mux(column_done, s_idle, s_stable)}
         }
     }
+
+    // *** performance counters ***//
+    val (row_count, row_wrap) = Counter(column_done, params.imgHeight)
+    io.finished := row_wrap
 }
