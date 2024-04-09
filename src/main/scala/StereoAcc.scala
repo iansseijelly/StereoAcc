@@ -99,6 +99,6 @@ class StereoAcc(params: StereoAccParams)(implicit p: Parameters) extends Module 
     }
 
     // *** performance counters ***//
-    val (row_count, row_wrap) = Counter(column_done, params.imgHeight)
+    val (row_count, row_wrap) = Counter(column_done, params.imgHeight-params.blockSize+1)
     io.finished := row_wrap
 }

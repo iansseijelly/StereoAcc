@@ -63,7 +63,7 @@ class SADPipe(param: StereoAccParams) extends AnyPipeModule(param) {
     SAD := VecInit.tabulate(param.blockSize*param.blockSize){i => 
         val x = i % param.blockSize
         val y = i / param.blockSize
-        val adpe = Module(new EU_ADPE)
+        val adpe = Module(new Mux_ADPE)
         adpe.io.A := stationary_reg(y)(x)
         adpe.io.B := circular_reg.io.data(y)(x)
         adpe.io.AD

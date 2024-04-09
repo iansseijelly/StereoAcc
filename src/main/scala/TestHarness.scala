@@ -11,7 +11,7 @@ abstract class InputGen()(implicit val p: Parameters) extends Module {
   })
   def gen_write_data(index: UInt): UInt
   val params = p(StereoAccKey)
-  val (test_count, test_wrap) = Counter(io.enq.fire, (params.imgWidth*params.imgHeight/4))
+  val (test_count, test_wrap) = Counter(io.enq.fire, (2*params.imgWidth*params.imgHeight/4))
   val test_done = RegInit(false.B)
   when (test_wrap) {test_done := true.B}
 
