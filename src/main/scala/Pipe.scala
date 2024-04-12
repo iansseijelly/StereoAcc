@@ -45,7 +45,7 @@ abstract class AnyPipeModule (val param: StereoAccParams) extends Module {
     val (c_w_count, c_w_wrap) = Counter(io.w_circular.valid, param.searchRange + param.blockSize)
     val c_w_done = RegInit(false.B)
     when (c_w_wrap) {c_w_done := true.B}
-    val c_full = RegInit(false.B)
+    val c_full = c_w_count >= param.blockSize.U
 
     val do_compute = io.w_circular.valid && c_full
     
@@ -54,16 +54,15 @@ abstract class AnyPipeModule (val param: StereoAccParams) extends Module {
     val c_c_done = RegNext(c_w_done)
 
     // c must not be full when s is not done
-    assert(!(!s_w_done && c_full), "c must not be full when s is not done")
+    assert(!(!s_w_done && c_w_done), "c must not be full when s is not done")
 }
 
 class SADPipe(param: StereoAccParams) extends AnyPipeModule(param) {
-
     val SAD = Wire(UInt(32.W))
     SAD := VecInit.tabulate(param.blockSize*param.blockSize){i => 
         val x = i % param.blockSize
         val y = i / param.blockSize
-        val adpe = Module(new Mux_ADPE)
+        val adpe = Module(new EU_ADPE)
         adpe.io.A := stationary_reg(y)(x)
         adpe.io.B := circular_reg.io.data(y)(x)
         adpe.io.AD
@@ -83,10 +82,10 @@ class SADPipe(param: StereoAccParams) extends AnyPipeModule(param) {
     when (io.output.fire){
         // reset all arch state
         min_SAD := 0xFFFFFFFFL.U
+        best_offset := 0.U
         s_w_done := false.B
         c_w_done := false.B
         c_c_done := false.B
-        c_full := false.B
         s_w_count := 0.U
         c_w_count := 0.U
     }

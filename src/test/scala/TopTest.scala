@@ -11,13 +11,17 @@ class StereoAccTester(implicit val p: Parameters) extends Module {
     when (th.io.success) { stop() }
 }
 
+class StereoAccImgTester(implicit val p: Parameters) extends Module {
+    val th = Module(new ImgTestHarness)
+    when (th.io.success) { stop() }
+}
+
 abstract class AbstractTopTest (config: Config) extends AnyFlatSpec with ChiselScalatestTester {
     behavior of "StereoAcc"
     it should "do some computation" in {
         implicit val p: Parameters = config
         val param = p(StereoAccKey)
-
-        test (new StereoAccTester).
+        test (new StereoAccImgTester).
             withAnnotations(Seq(WriteVcdAnnotation)).runUntilStop(timeout = 1000)
     }
 }
