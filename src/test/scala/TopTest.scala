@@ -11,6 +11,7 @@ class StereoAccTester(implicit val p: Parameters) extends Module {
     when (th.io.success) { stop() }
 }
 
+@deprecated("Implmentation is not complete", "1.0")
 class StereoAccImgTester(implicit val p: Parameters) extends Module {
     val th = Module(new ImgTestHarness)
     when (th.io.success) { stop() }
@@ -21,7 +22,7 @@ abstract class AbstractTopTest (config: Config) extends AnyFlatSpec with ChiselS
     it should "do some computation" in {
         implicit val p: Parameters = config
         val param = p(StereoAccKey)
-        test (new StereoAccImgTester).
+        test (new StereoAccTester).
             withAnnotations(Seq(WriteVcdAnnotation)).runUntilStop(timeout = 1000)
     }
 }

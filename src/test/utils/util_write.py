@@ -11,6 +11,9 @@ if __name__ == '__main__':
     parser.add_argument('--right', type=str, help='right image file', required=True)
     parser.add_argument('--imgWidth', type=int, help='image width', required=True)
     parser.add_argument('--imgHeight', type=int, help='image height', required=True)
+    parser.add_argument('--min_disp', type=int, help='minimum disparity', required=True)
+    parser.add_argument('--max_disp', type=int, help='maximum disparity', required=True)
+    parser.add_argument('--block_size', type=int, help='block size', required=True)
     args = parser.parse_args()
 
     # read images as grayscale
@@ -28,12 +31,15 @@ if __name__ == '__main__':
     # convert to raw bytes
     raw_left = gray_left_resized.tobytes()
     raw_right = gray_right_resized.tobytes()
+    # size sanity check
     height, width = gray_right_resized.shape
     print(f"Height: {height}, Width: {width}")
 
     # write to files
-    path = 'generators/stereoacc/src/test/python/intermediate/'
+    path = 'generators/stereoacc/src/test/utils/intermediate/'
     with open(f'{path}left_matrix', 'wb') as f:
         f.write(raw_left)
     with open(f'{path}right_matrix', 'wb') as f:
         f.write(raw_right)
+    with open('dimensions', 'w') as f:
+        f.write(f"{height},{width},{args.min_disp},{args.max_disp},{args.block_size}")
