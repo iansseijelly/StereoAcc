@@ -3,13 +3,9 @@ package stereoacc
 import chisel3._
 import chisel3.util._
 import org.chipsalliance.cde.config.{Config, Parameters, Field}
+import rose.Dataflow
 
-class StereoAcc(params: StereoAccParams)(implicit p: Parameters) extends Module {
-    val io = IO(new Bundle {
-        val enq = Flipped(Decoupled(UInt(32.W)))
-        val deq = Decoupled(UInt(32.W))
-        val finished = Output(Bool())
-    })
+class StereoAcc(params: StereoAccParams)(implicit p: Parameters) extends Dataflow()(p) {
 
     // *** image buffers ***//
     val leftImgBuffer = Module(new SRAMImgBuffer(params.blockSize, params.imgWidth, params.imgHeight))
