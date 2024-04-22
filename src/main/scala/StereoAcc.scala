@@ -4,8 +4,9 @@ import chisel3._
 import chisel3.util._
 import org.chipsalliance.cde.config.{Config, Parameters, Field}
 import rose.Dataflow
+import rose.CompleteDataflowConfig
 
-class StereoAcc(params: StereoAccParams)(implicit p: Parameters) extends Dataflow()(p) {
+class StereoAcc(params: StereoAccParams) extends Dataflow(CompleteDataflowConfig(params)) {
 
     // *** image buffers ***//
     val leftImgBuffer = Module(new SRAMImgBuffer(params.blockSize, params.imgWidth, params.imgHeight))
@@ -95,6 +96,6 @@ class StereoAcc(params: StereoAccParams)(implicit p: Parameters) extends Dataflo
     }
 
     // *** performance counters ***//
-    val (row_count, row_wrap) = Counter(column_done, params.imgHeight-params.blockSize+1)
-    io.finished := row_wrap
+    // val (row_count, row_wrap) = Counter(column_done, params.imgHeight-params.blockSize+1)
+    // io.finished := row_wrap
 }

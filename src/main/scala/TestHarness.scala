@@ -112,7 +112,6 @@ class OutputCheck(implicit val p: Parameters) extends Module {
 class TestHarness(implicit val p: Parameters) extends Module {
   val io = IO(new Bundle { val success = Output(Bool()) })
   val dut = Module(new StereoAcc(p(StereoAccKey)))
-  io.success := dut.io.finished
   val inputGen = Module(new NumericInputGen)
   val outputCheck = Module(new OutputCheck)
   inputGen.io.enq <> dut.io.enq
@@ -122,7 +121,6 @@ class TestHarness(implicit val p: Parameters) extends Module {
 class ImgTestHarness(implicit val p: Parameters) extends Module {
   val io = IO(new Bundle { val success = Output(Bool()) })
   val dut = Module(new StereoAcc(p(StereoAccKey)))
-  io.success := dut.io.finished
   val inputGen = Module(new ImageInputGen("cones"))
   val outputCheck = Module(new OutputCheck)
   inputGen.io.enq <> dut.io.enq

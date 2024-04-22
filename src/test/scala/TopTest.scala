@@ -8,13 +8,11 @@ import org.chipsalliance.cde.config.{Config, Parameters}
 
 class StereoAccTester(implicit val p: Parameters) extends Module {
     val th = Module(new TestHarness)
-    when (th.io.success) { stop() }
 }
 
 @deprecated("Implmentation is not complete", "1.0")
 class StereoAccImgTester(implicit val p: Parameters) extends Module {
     val th = Module(new ImgTestHarness)
-    when (th.io.success) { stop() }
 }
 
 abstract class AbstractTopTest (config: Config) extends AnyFlatSpec with ChiselScalatestTester {
