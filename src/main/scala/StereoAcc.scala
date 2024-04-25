@@ -56,7 +56,7 @@ class StereoAcc(params: StereoAccParams) extends Dataflow(CompleteDataflowConfig
     Pulsify(column_done)
 
     def do_compute = state === s_stable
-    val read_index = l_col_count +& l_offset_count
+    val read_index = l_col_count * params.fuWidth.U +& l_offset_count
 
     // mux the data into the pipeios
     for (i <- 0 until params.fuWidth) {
@@ -96,6 +96,7 @@ class StereoAcc(params: StereoAccParams) extends Dataflow(CompleteDataflowConfig
     }
 
     // *** performance counters ***//
-    // val (row_count, row_wrap) = Counter(column_done, params.imgHeight-params.blockSize+1)
+    val (row_count, row_wrap) = Counter(column_done, params.imgHeight-params.blockSize+1)
+    dontTouch(row_count)
     // io.finished := row_wrap
 }

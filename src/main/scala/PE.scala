@@ -11,16 +11,16 @@ abstract class Any_ADPE extends Module{
     }) 
 }
 
-// An EU patent average difference
 class EU_ADPE extends Any_ADPE {
-    val A_s = io.A.asSInt
-    val B_s = io.B.asSInt
-    val AB = Wire(SInt(8.W))
-    AB := A_s -% B_s // without width expansion
-    val BA = Wire(SInt(8.W))
+    val A_s = Cat(0.U(1.W), io.A).asSInt // 0-extension
+    val B_s = Cat(0.U(1.W), io.B).asSInt
+    val AB = Wire(SInt(9.W))
+    AB := A_s -% B_s // minus without width expansion
+    val BA = Wire(SInt(9.W))
     BA := B_s -% A_s
-    io.AD := Mux(AB(7), BA, AB).asUInt
-    assert(io.AD(7) === 0.U) // must be positive
+    io.AD := Mux(AB(8), BA(7, 0).asUInt, AB(7, 0).asUInt)
+    // assert(io.AD(7) === 0.U) // must be positive
+    assert(AB(8) ^ BA(8) || io.A === io.B) // sign must be different
 }
 
 // A Mux version of computing AD
