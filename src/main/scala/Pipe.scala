@@ -16,6 +16,13 @@ class Circular_ShiftReg(val param: StereoAccParams) extends Module {
             shift_reg(i) := shift_reg(i-1)
         }
     }
+
+    when (io.input_valid) {
+        shift_reg(param.blockSize-1) := io.input_data
+        for (i <- param.blockSize-2 to 0 by -1) {
+            shift_reg(i) := shift_reg(i+1)
+        }
+    }
     io.data := shift_reg
 }
 
