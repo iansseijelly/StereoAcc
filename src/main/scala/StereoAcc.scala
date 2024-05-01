@@ -43,7 +43,7 @@ class StereoAcc(params: StereoAccParams) extends Dataflow(CompleteDataflowConfig
     }
 
     // *** compute state machine ***//
-    val s_idle :: s_stable :: s_tail :: Nil = Enum(3)
+    val s_idle :: s_stable :: s_tail :: s_reset :: Nil = Enum(4)
     val state = RegInit(s_idle)
 
     // the left fine counter tracking the offsets of the reads
@@ -54,6 +54,9 @@ class StereoAcc(params: StereoAccParams) extends Dataflow(CompleteDataflowConfig
     val column_done = RegInit(false.B)
     when (l_col_wrap) {column_done := true.B}
     Pulsify(column_done)
+
+    // keeping track of the number of rows operated on
+    val (row_count, row_wrap) = Counter(column_done, params.imgHeight-params.blockSize)
 
     def do_compute = state === s_stable
     val read_index = l_col_count * params.fuWidth.U +& l_offset_count
@@ -91,12 +94,26 @@ class StereoAcc(params: StereoAccParams) extends Dataflow(CompleteDataflowConfig
         // tail state, collect the output
         is(s_tail) {
             // hold the state until the output is collected
-            when (deq_wrap) {state := Mux(column_done, s_idle, s_stable)}
+            when (deq_wrap) {state := Mux(
+                row_wrap, s_reset, Mux(
+                column_done, s_idle, s_stable)
+                )
+            }
+        }
+        // this assumes 1-cycle reset
+        is (s_reset) {
+            // reset the imgbuffers
+            leftImgBuffer.reset := true.B
+            rightImgBuffer.reset := true.B
+            // reset internal state
+            l_col_count := 0.U
+            row_count := 0.U
+            state := s_idle
+            // just to be safe
+            l_offset_count := 0.U
+            deq_ptr := 0.U
         }
     }
 
-    // *** performance counters ***//
-    val (row_count, row_wrap) = Counter(column_done, params.imgHeight-params.blockSize+1)
-    dontTouch(row_count)
     // io.finished := row_wrap
 }

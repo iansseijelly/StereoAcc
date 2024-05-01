@@ -15,15 +15,15 @@ case class StereoAccParams(
     costFunct: String = "SAD",
     // TODO: make me MMIO
     // The width of the target image
-    imgWidth: Int = 128,
+    imgWidth: Int = 256,
     // TODO: make me MMIO
     // The height of the target image
-    imgHeight: Int = 128,
+    imgHeight: Int = 256,
     // Use SRAM for the row buffer
     useSRAM: Boolean = true,
     // search range
     // TODO: make me MMIO?
-    searchRange : Int = 16,
+    searchRange : Int = 32,
     // *** BaseDataflow Parameters ***
     dfChannelWidth: Int = 32
 ) extends BaseDataflowParameter(channelWidth = dfChannelWidth) {
