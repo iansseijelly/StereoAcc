@@ -3,7 +3,103 @@ package stereoacc
 import chisel3._
 import chisel3.util._
 
-class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) extends Module {
+
+class SRAMImgBuffer(val nRows: Int, val imgWidth: Int, val imgHeight: Int) extends Module { 
+
+    val rWidth : Int = 8
+    val wWidth : Int = 32
+
+    val io = IO(new Bundle {
+        // write by rows
+        val write = Flipped(Decoupled(UInt(32.W)))
+        // read by columns
+        val read = new Bundle {
+            val request = new Bundle {
+                val valid = Input(Bool())
+                val ready = Output(Bool())
+                val index = Input(UInt(log2Ceil(imgWidth).W))
+            }
+            val response = new Bundle {
+                val valid = Output(Bool())
+                val bits = Output(Vec(nRows, UInt(rWidth.W)))
+            }
+            val done = Input(Bool())
+        }
+    })
+
+    val nBanks = nRows // no extra bank!
+    val dBanks = imgWidth * 8 / rWidth // depth of each bank in terms of rWidth 
+
+    val s_idle :: s_fill :: s_stable :: Nil = Enum(3)
+    val state = RegInit(s_idle)
+    val w_col_done = RegInit(false.B)
+    val w_row_done = RegInit(false.B)
+    val r_row_done = RegInit(false.B)
+    io.read.request.ready := state === s_stable 
+    
+    val w_enable = Wire(Vec(nBanks, Bool()))
+    val r_enable = Wire(Vec(nBanks, Bool()))
+
+    val w_des = Module(new SerialWidthSlicer(narrowW=8, wideW=wWidth))
+    w_des.io.wide <> io.write
+    // counter tracking the serial width slicer write address
+    val (w_col_count, w_col_wrap) = Counter(cond=w_des.io.narrow.fire, n=imgWidth)
+    val w_addr = w_col_count
+    // enq_ptr is the pointer to the bank that is currently being written to
+    val (enq_ptr, _) = Counter(cond=w_col_wrap, n=nBanks)
+
+    // counter tracking the read address
+    val r_addr = io.read.request.index
+    val r_datas = Wire(Vec(nBanks, UInt(rWidth.W)))
+
+    for (i <- 0 until nBanks) {
+        w_enable(i) := i.U === enq_ptr && w_des.io.narrow.fire
+        r_enable(i) := state === s_stable && io.read.request.valid
+    }
+
+    io.read.response.bits := VecInit(0 until nRows map (i => (r_datas(i.U))))
+    io.read.response.valid := state === s_stable && RegNext(io.read.request.valid)
+    w_des.io.narrow.ready := state === s_idle || state === s_fill
+    
+    // Generate NBanks SRAM Banks
+    for (i <- 0 until nBanks) {
+        val sram = SyncReadMem(dBanks, UInt(rWidth.W))
+        // equivalent to this statement, which is not available in chisel 3.6
+        // r_datas(i) := sram.readWrite(idx       = Mux(w_enable(i), w_addr, r_addr), 
+        //                              writeData = w_des.io.narrow.bits, 
+        //                              en        = w_enable(i) || r_enable(i),
+        //                              isWrite   = w_enable(i))
+        r_datas(i) := DontCare
+        when (w_enable(i) || r_enable(i)){
+            val rdwrPort = sram(Mux(w_enable(i), w_addr, r_addr))
+            when (w_enable(i)) {rdwrPort := w_des.io.narrow.bits}
+            .otherwise {r_datas(i) := rdwrPort}
+        }
+    }
+
+    // state machine
+    switch(state){
+        // wait for write
+        is(s_idle){
+            state := Mux(io.write.fire, s_fill, s_idle)
+            // arch state initialization
+            enq_ptr := 0.U
+            w_col_done := false.B
+        }
+
+        // fill the banks until nBanks-1 banks are full
+        is(s_fill){
+            state := Mux(enq_ptr === (nRows-1).U && w_col_wrap, s_stable, s_fill)
+        }
+
+        // wait for read requests
+        is(s_stable){
+            when(io.read.done) {state := s_idle}
+        }
+    }
+}
+
+class SRAMImgBufferExcess(val nRows: Int, val imgWidth: Int, val imgHeight: Int) extends Module {
 
     val rWidth : Int = 8
     val wWidth : Int = 32

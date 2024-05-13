@@ -8,7 +8,7 @@ import java.io.File
 import java.io.FileReader
 import java.io.FileInputStream
 
-abstract class InputGen()(implicit val p: Parameters) extends Module {
+abstract class StereoAccInputGen()(implicit val p: Parameters) extends Module {
   val io = IO(new Bundle {
     val enq = Decoupled(UInt(32.W))
   })
@@ -30,7 +30,7 @@ abstract class InputGen()(implicit val p: Parameters) extends Module {
 
 // the most simple input generator
 // Expect to see all 0x00s
-class NumericInputGen()(implicit p: Parameters) extends InputGen {
+class NumericInputGen()(implicit p: Parameters) extends StereoAccInputGen {
   override def gen_write_data(index: UInt): UInt = {
         val data : UInt = (index&(0xFF.U)|
                           (((index+1.U)&(0xFF.U))<<8)|
@@ -40,9 +40,10 @@ class NumericInputGen()(implicit p: Parameters) extends InputGen {
     }
 }
 
+
 // an input generator that has different data for left and right images
 // Expect to see non-zero outputs
-class LeftRightInputGen()(implicit p: Parameters) extends InputGen {
+class LeftRightInputGen()(implicit p: Parameters) extends StereoAccInputGen {
   override def gen_write_data(index: UInt): UInt = {
     val l_data = (index&(0xFF.U)|
                      (((index+1.U)&(0xFF.U))<<8)|
@@ -57,7 +58,7 @@ class LeftRightInputGen()(implicit p: Parameters) extends InputGen {
 }
 
 // an input generator that reads in an image
-class ImageInputGen(val img_name: String)(implicit p: Parameters) extends InputGen {
+class ImageInputGen(val img_name: String)(implicit p: Parameters) extends StereoAccInputGen {
   
   def u_convert(x: Byte): Int = {
     if (x < 0) x + 256 else x
@@ -96,6 +97,37 @@ class ImageInputGen(val img_name: String)(implicit p: Parameters) extends InputG
   }
 }
 
+abstract class Pool2DInputGen()(implicit val p: Parameters) extends Module {
+  val io = IO(new Bundle {
+    val enq = Decoupled(UInt(32.W))
+  })
+
+  def gen_write_data(index: UInt): UInt
+  
+  val params = p(Pool2DKey)
+  val (test_count, test_wrap) = Counter(io.enq.fire, (2*params.imgWidth*params.imgHeight/4))
+  val test_done = RegInit(false.B)
+  when (test_wrap) {test_done := true.B}
+
+  io.enq.bits := gen_write_data(test_count<<2)
+  io.enq.valid := !test_done
+
+  when (io.enq.fire) {
+    test_count := test_count + 1.U
+  }
+}
+
+// the most simple input generator
+class NumericPool2DInputGen()(implicit p: Parameters) extends Pool2DInputGen {
+  override def gen_write_data(index: UInt): UInt = {
+        val data : UInt = (index&(0xFF.U)|
+                          (((index+1.U)&(0xFF.U))<<8)|
+                          (((index+2.U)&(0xFF.U))<<16)|
+                          (((index+3.U)&(0xFF.U))<<24))
+        data
+    }
+}
+
 class OutputCheck(implicit val p: Parameters) extends Module {
   val io = IO(new Bundle {
     val deq = Flipped(Decoupled(UInt(32.W)))
@@ -110,19 +142,25 @@ class OutputCheck(implicit val p: Parameters) extends Module {
 }
 
 class TestHarness(implicit val p: Parameters) extends Module {
-  val io = IO(new Bundle { val success = Output(Bool()) })
   val dut = Module(new StereoAcc(p(StereoAccKey)))
-  val inputGen = Module(new NumericInputGen)
+  val StereoAccInputGen = Module(new NumericInputGen)
   val outputCheck = Module(new OutputCheck)
-  inputGen.io.enq <> dut.io.enq
+  StereoAccInputGen.io.enq <> dut.io.enq
   outputCheck.io.deq <> dut.io.deq
 }
 
 class ImgTestHarness(implicit val p: Parameters) extends Module {
-  val io = IO(new Bundle { val success = Output(Bool()) })
   val dut = Module(new StereoAcc(p(StereoAccKey)))
-  val inputGen = Module(new ImageInputGen("cones"))
+  val StereoAccInputGen = Module(new ImageInputGen("cones"))
   val outputCheck = Module(new OutputCheck)
-  inputGen.io.enq <> dut.io.enq
+  StereoAccInputGen.io.enq <> dut.io.enq
+  outputCheck.io.deq <> dut.io.deq
+}
+
+class Pool2DTestHarness(implicit val p: Parameters) extends Module {
+  val dut = Module(new Pool2D(p(Pool2DKey)))
+  val StereoAccInputGen = Module(new NumericPool2DInputGen)
+  val outputCheck = Module(new OutputCheck)
+  StereoAccInputGen.io.enq <> dut.io.enq
   outputCheck.io.deq <> dut.io.deq
 }

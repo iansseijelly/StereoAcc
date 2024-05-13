@@ -10,6 +10,8 @@ case object StereoAccKey extends Field[StereoAccParams]
 class StereoAccLoneConfig (p: StereoAccParams) extends Config((site, here, up) => {
     case StereoAccKey => p })
 
+
+
 class TestConfig extends StereoAccLoneConfig(StereoAccParams(
     blockSize = 4,
     fuWidth = 4,
@@ -28,6 +30,26 @@ class SmallSADConfig extends StereoAccLoneConfig(StereoAccParams(
     imgHeight = 256,
     useSRAM = true,
     searchRange = 12
+))
+
+
+case object Pool2DKey extends Field[Pool2DParams]
+
+class Pool2DConfig (p: Pool2DParams) extends Config((site, here, up) => {
+    case Pool2DKey => p })
+
+class Avg2DConfig extends Pool2DConfig(Pool2DParams(
+    blockSize = 2,
+    imgWidth = 32,
+    imgHeight = 32,
+    reduction = "avg"
+)) 
+
+class Max2DConfig extends Pool2DConfig(Pool2DParams(
+    blockSize = 2,
+    imgWidth = 32,
+    imgHeight = 32,
+    reduction = "max"
 ))
 
 // *** configs for near-sensor coupled accelerators ***

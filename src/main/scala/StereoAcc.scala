@@ -9,8 +9,8 @@ import rose.CompleteDataflowConfig
 class StereoAcc(params: StereoAccParams) extends Dataflow(CompleteDataflowConfig(params)) {
 
     // *** image buffers ***//
-    val leftImgBuffer = Module(new SRAMImgBuffer(params.blockSize, params.imgWidth, params.imgHeight))
-    val rightImgBuffer = Module (new SRAMImgBuffer(params.blockSize, params.imgWidth, params.imgHeight))
+    val leftImgBuffer = Module(new SRAMImgBufferExcess(params.blockSize, params.imgWidth, params.imgHeight))
+    val rightImgBuffer = Module (new SRAMImgBufferExcess(params.blockSize, params.imgWidth, params.imgHeight))
 
     // *** pipes ***//
     val pipeio = Seq.fill(params.fuWidth) {

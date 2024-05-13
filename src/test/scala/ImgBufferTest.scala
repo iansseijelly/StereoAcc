@@ -15,15 +15,15 @@ class ImgBufferTest extends AnyFlatSpec with ChiselScalatestTester {
     }
 
     behavior of "ImgBuffer" 
-    // it should "instantiate SRAMImgBuffer" in {
-    //     test(new SRAMImgBuffer(nRows=4, imgWidth=32, imgHeight=32)) { c =>
+    // it should "instantiate SRAMImgBufferExcess" in {
+    //     test(new SRAMImgBufferExcess(nRows=4, imgWidth=32, imgHeight=32)) { c =>
     //         c.clock.step()
     //         println("Instantiation successful!")
     //     }
     // }
 
     it should "accept writes until stable" in {
-        test(new SRAMImgBuffer(nRows=BLOCKSIZE, imgWidth=32, imgHeight=32)).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
+        test(new SRAMImgBufferExcess(nRows=BLOCKSIZE, imgWidth=32, imgHeight=32)).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
             for (i <- 0 until 32*(BLOCKSIZE+1)/4 by 4) {
                 c.io.write.valid.poke(true.B)
                 val data = gen_write_data(BigInt(i))
@@ -38,7 +38,7 @@ class ImgBufferTest extends AnyFlatSpec with ChiselScalatestTester {
     }
 
     it should "full read write with conservative writes" in {
-        test(new SRAMImgBuffer(nRows=4, imgWidth=32, imgHeight=32)).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
+        test(new SRAMImgBufferExcess(nRows=4, imgWidth=32, imgHeight=32)).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
             for (i <- 0 until 32*(BLOCKSIZE) by 4) {
                 c.io.write.valid.poke(true.B)
                 val data = gen_write_data(BigInt(i))
@@ -101,7 +101,7 @@ class ImgBufferTest extends AnyFlatSpec with ChiselScalatestTester {
     }
 
     it should "full read write with excessive writes" in {
-        test(new SRAMImgBuffer(nRows=4, imgWidth=32, imgHeight=32)).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
+        test(new SRAMImgBufferExcess(nRows=4, imgWidth=32, imgHeight=32)).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
             for (i <- 0 until 32*(BLOCKSIZE+1) by 4) {
                 c.io.write.valid.poke(true.B)
                 val data = gen_write_data(BigInt(i))

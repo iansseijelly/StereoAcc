@@ -40,3 +40,21 @@ case class StereoAccParams(
     def numIterPerRow: Int = (imgWidth-searchRange)/fuWidth
     override def elaborate: StereoAcc = Module(new StereoAcc(this))
 }
+
+case class Pool2DParams(
+    // the size of block being resized to one pixel
+    blockSize: Int = 2,
+    // the width of the target image
+    imgWidth: Int = 256,
+    // the height of the target image
+    imgHeight: Int = 256,
+    // reduction function
+    reduction: String = "max",
+    // *** BaseDataflow Parameters ***
+    dfChannelWidth: Int = 32 
+) extends BaseDataflowParameter(channelWidth = dfChannelWidth) {
+    require(imgWidth % blockSize == 0, "The width of the image must be a multiple of the block size")
+    require(imgHeight % blockSize == 0, "The height of the image must be a multiple of the block size")
+    require(Seq("max", "avg").contains(reduction), "The reduction function must be one of max, avg")
+    override def elaborate: Pool2D = Module(new Pool2D(this))
+}
