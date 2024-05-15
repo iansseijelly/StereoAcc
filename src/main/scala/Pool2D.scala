@@ -33,9 +33,9 @@ class Pool2D(params: Pool2DParams) extends Dataflow(CompleteDataflowConfig(param
     val state = RegInit(s_idle)
 
     def do_read = state === s_stable
-    def do_write = RegNext(state === s_stable)
+    def do_write = RegNext(state === s_stable, false.B)
     // 1 delay for req->resp, and 1 delay for resp->changing register value
-    def do_compute = RegNext(RegNext(state === s_stable))
+    def do_compute = RegNext(RegNext(state === s_stable, false.B))
 
     // *** functional unit ***//
     val (w_count, w_wrap) = Counter(io.enq.fire, params.imgWidth*2/4)
@@ -90,7 +90,7 @@ class Pool2D(params: Pool2DParams) extends Dataflow(CompleteDataflowConfig(param
     when (state === s_stable && r_wrap) {read_done := true.B}
     Pulsify(read_done)
 
-    when (read_done) {r_bufferPtr := ~r_bufferPtr}
+    when (r_wrap) {r_bufferPtr := ~r_bufferPtr}
     
     imgBuffer0.io.read.done := Mux(r_bufferPtr, read_done, false.B)
     imgBuffer1.io.read.done := Mux(~r_bufferPtr, read_done, false.B)

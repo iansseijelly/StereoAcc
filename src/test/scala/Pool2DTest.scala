@@ -22,11 +22,11 @@ abstract class Pool2DTest (config: Config) extends AnyFlatSpec with ChiselScalat
     }
 
     behavior of "Pool2D" 
-
+ 
     it should "do some compute" in {
         implicit val p: Parameters = config
         test (new pool2DTester).
-            withAnnotations(Seq(WriteVcdAnnotation)).runUntilStop(timeout = 1000)
+            withAnnotations(Seq(VcsBackendAnnotation, WriteFsdbAnnotation)).runUntilStop(timeout = 1000)
 
     }
 }
