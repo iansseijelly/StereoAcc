@@ -28,6 +28,26 @@ abstract class StereoAccInputGen()(implicit val p: Parameters) extends Module {
   }
 }
 
+abstract class EdgeDetAccInputGen()(implicit val p: Parameters) extends Module {
+  val io = IO(new Bundle {
+    val enq = Decoupled(UInt(32.W))
+  })
+
+  def gen_write_data(index: UInt): UInt
+  
+  val params = p(EdgeDetAccKey)
+  val (test_count, test_wrap) = Counter(io.enq.fire, (2*params.imgWidth*params.imgHeight/4))
+  val test_done = RegInit(false.B)
+  when (test_wrap) {test_done := true.B}
+
+  io.enq.bits := gen_write_data(test_count<<2)
+  io.enq.valid := !test_done
+
+  when (io.enq.fire) {
+    test_count := test_count + 1.U
+  }
+}
+
 // the most simple input generator
 // Expect to see all 0x00s
 class NumericInputGen()(implicit p: Parameters) extends StereoAccInputGen {
@@ -40,6 +60,15 @@ class NumericInputGen()(implicit p: Parameters) extends StereoAccInputGen {
     }
 }
 
+class NUmericEdgeDetAccInputGen()(implicit p: Parameters) extends EdgeDetAccInputGen {
+  override def gen_write_data(index: UInt): UInt = {
+        val data : UInt = (index&(0xFF.U)|
+                          (((index+1.U)&(0xFF.U))<<8)|
+                          (((index+2.U)&(0xFF.U))<<16)|
+                          (((index+3.U)&(0xFF.U))<<24))
+        data
+    }
+}
 
 // an input generator that has different data for left and right images
 // Expect to see non-zero outputs
@@ -160,6 +189,14 @@ class ImgTestHarness(implicit val p: Parameters) extends Module {
 class Pool2DTestHarness(implicit val p: Parameters) extends Module {
   val dut = Module(new Pool2D(p(Pool2DKey)))
   val StereoAccInputGen = Module(new NumericPool2DInputGen)
+  val outputCheck = Module(new OutputCheck)
+  StereoAccInputGen.io.enq <> dut.io.enq
+  outputCheck.io.deq <> dut.io.deq
+}
+
+class EdgeDetAccTestHarness(implicit val p: Parameters) extends Module {
+  val dut = Module(new EdgeDetAcc(p(EdgeDetAccKey)))
+  val StereoAccInputGen = Module(new NUmericEdgeDetAccInputGen)
   val outputCheck = Module(new OutputCheck)
   StereoAccInputGen.io.enq <> dut.io.enq
   outputCheck.io.deq <> dut.io.deq

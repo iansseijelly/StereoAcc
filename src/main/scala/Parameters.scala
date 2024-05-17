@@ -58,3 +58,14 @@ case class Pool2DParams(
     require(Seq("max", "avg").contains(reduction), "The reduction function must be one of max, avg")
     override def elaborate: Pool2D = Module(new Pool2D(this))
 }
+
+case class EdgeDetAccParams (
+    imgWidth: Int = 256,
+    imgHeight: Int = 256,
+    dfChannelWidth: Int = 32
+) extends BaseDataflowParameter(channelWidth = dfChannelWidth) {
+    require(imgWidth % 4 == 0, "The width of the image must be a multiple of 4bytes, 32 bits")
+    require(imgHeight % 4 == 0, "The height of the image must be a multiple of 4bytes, 32 bits")
+    override def elaborate: EdgeDetAcc = Module(new EdgeDetAcc(this))
+    def blockSize: Int = 3
+}

@@ -3,10 +3,7 @@ package stereoacc
 import chisel3._
 import chisel3.util._
 import org.chipsalliance.cde.config.{Config, Parameters, Field}
-import rose.Dataflow
-import rose.CompleteDataflowConfig
-import freechips.rocketchip.regmapper.RegField.w
-import freechips.rocketchip.regmapper.RegField.r
+import rose.{Dataflow, CompleteDataflowConfig}
 
 class Pool2D(params: Pool2DParams) extends Dataflow(CompleteDataflowConfig(params)) {
 

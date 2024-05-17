@@ -11,7 +11,6 @@ class StereoAccLoneConfig (p: StereoAccParams) extends Config((site, here, up) =
     case StereoAccKey => p })
 
 
-
 class TestConfig extends StereoAccLoneConfig(StereoAccParams(
     blockSize = 4,
     fuWidth = 4,
@@ -52,4 +51,11 @@ class Max2DConfig extends Pool2DConfig(Pool2DParams(
     reduction = "max"
 ))
 
-// *** configs for near-sensor coupled accelerators ***
+case object EdgeDetAccKey extends Field[EdgeDetAccParams]
+
+class EdgeDetAccConfig (p: EdgeDetAccParams) extends Config((site, here, up) => {
+    case EdgeDetAccKey => p })
+
+class EdgeDetAccTestConfig extends EdgeDetAccConfig(EdgeDetAccParams(
+    imgHeight = 32,
+    imgWidth = 32))

@@ -6,21 +6,20 @@ import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.chipsalliance.cde.config.{Config, Parameters}
 
-class pool2DTester(implicit val p: Parameters) extends Module {
-    val th = Module(new Pool2DTestHarness)
+class EdgeDetAccTester(implicit val p: Parameters) extends Module {
+    val th = Module(new EdgeDetAccTestHarness)
 }
 
-abstract class Pool2DTest (config: Config) extends AnyFlatSpec with ChiselScalatestTester {
+abstract class AbstractEdgeDetAccTest (config: Config) extends AnyFlatSpec with ChiselScalatestTester {
 
-    behavior of "Pool2D" 
+    behavior of "EdgeDetAcc"
  
     it should "do some compute" in {
         implicit val p: Parameters = config
-        test (new pool2DTester).
+        test (new EdgeDetAccTester).
             withAnnotations(Seq(VcsBackendAnnotation, WriteFsdbAnnotation)).runUntilStop(timeout = 1000)
 
     }
 }
 
-class Avg2DPoolTest extends Pool2DTest(new Avg2DConfig)
-class Max2DPoolTest extends Pool2DTest(new Max2DConfig)
+class EdgeDetAccTest extends AbstractEdgeDetAccTest(new EdgeDetAccTestConfig)
