@@ -33,11 +33,13 @@ case class StereoAccParams(
     require(searchRange < imgWidth, "The search range must be less than the width of the image")
     require(fuWidth % 4 == 0, "The width of the functional units must be a multiple of 4")
     // //FIXME: formalize these requirements
-    require((imgWidth-blockSize-searchRange) % fuWidth == 0,
+    require((imgWidth-searchRange) % fuWidth == 0,
         "The width of the functional units must be a multiple of the image width minus the search range")
-    require(searchRange % fuWidth == 0, "The search range must be a multiple of the width of the functional units")
+    require(fuWidth % blockSize == 0, "The width of the functional units must be a multiple of the block size")
     // def numBlocksPerIter: Int = fuDepth / blockSize
     def numIterPerRow: Int = (imgWidth-searchRange)/fuWidth
+    def imgSize = imgHeight * imgWidth
+    def stereoImgSize = (imgWidth - searchRange) * (imgHeight - blockSize)
     override def elaborate: StereoAcc = Module(new StereoAcc(this))
 }
 

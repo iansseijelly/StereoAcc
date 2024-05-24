@@ -16,21 +16,50 @@ class TestConfig extends StereoAccLoneConfig(StereoAccParams(
     fuWidth = 4,
     costFunct = "SAD",
     imgWidth = 32,
-    imgHeight = 5,
+    imgHeight = 32,
     useSRAM = true,
     searchRange = 8
 ))
 
 class SmallSADConfig extends StereoAccLoneConfig(StereoAccParams(
     blockSize = 4,
+    fuWidth = 4,
+    costFunct = "SAD",
+    imgWidth = 256,
+    imgHeight = 256,
+    useSRAM = true,
+    searchRange = 16
+))
+
+class MidSADConfig extends StereoAccLoneConfig(StereoAccParams(
+    blockSize = 4,
     fuWidth = 16,
     costFunct = "SAD",
     imgWidth = 256,
     imgHeight = 256,
     useSRAM = true,
-    searchRange = 12
+    searchRange = 16
 ))
 
+class LargeBlockSADConfig extends StereoAccLoneConfig(StereoAccParams(
+    blockSize = 8,
+    fuWidth = 8,
+    costFunct = "SAD",
+    imgWidth = 256,
+    imgHeight = 256,
+    useSRAM = true,
+    searchRange = 16
+))
+
+class LargeSADConfig extends StereoAccLoneConfig(StereoAccParams(
+    blockSize = 16,
+    fuWidth = 16,
+    costFunct = "SAD",
+    imgWidth = 1024,
+    imgHeight = 1024,
+    useSRAM = true,
+    searchRange = 64
+))
 
 case object Pool2DKey extends Field[Pool2DParams]
 
@@ -59,3 +88,7 @@ class EdgeDetAccConfig (p: EdgeDetAccParams) extends Config((site, here, up) => 
 class EdgeDetAccTestConfig extends EdgeDetAccConfig(EdgeDetAccParams(
     imgHeight = 32,
     imgWidth = 32))
+
+class EdgeDetAccSmallConfig extends EdgeDetAccConfig(EdgeDetAccParams(
+    imgHeight = 256,
+    imgWidth = 256))
