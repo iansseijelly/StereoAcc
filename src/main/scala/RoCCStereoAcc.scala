@@ -7,7 +7,9 @@ import org.chipsalliance.cde.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.subsystem.{BaseSubsystem, CacheBlockBytes}
+import freechips.rocketchip.prci._
 import freechips.rocketchip.regmapper.RegField.r
+import freechips.rocketchip.rocket.TLB
 
 object StereoAccISA{
     // funct
@@ -22,7 +24,7 @@ object StereoAccISA{
 }
 import StereoAccISA._
 
-class DefaultStereoAccConfig(
+class WithDefaultStereoAccConfig(
   stereoaccConfig: StereoAccParams = StereoAccParams(),
   opcodes : OpcodeSet = OpcodeSet.custom0
 ) extends Config((site, here, up) => {
@@ -30,6 +32,7 @@ class DefaultStereoAccConfig(
     (p: Parameters) => {
       implicit val q = p
       val stereoaccrocc = LazyModule(new RoCCStereoAcc(opcodes, stereoaccConfig))
+
       stereoaccrocc
     }
   )
@@ -90,16 +93,16 @@ class stereoaccReadDMA(stereoaccConfig: StereoAccParams)(implicit p: Parameters)
           mstate := Mux(mem.d.fire, mIdle, mResp)
         }
       }
+      io.done := r_done
     }
   }
 }
 
 class stereoaccWriteDMA(stereoaccConfig: StereoAccParams)(implicit p: Parameters) extends LazyModule {
   val node = TLClientNode(Seq(TLMasterPortParameters.v1(Seq(TLClientParameters(
-    name = "stereoacc-w-dma", sourceId = IdRange(0, 1)))))
-  )
-  lazy val module = new stereoaccWriteDMAModuleImpl(this)
-  class stereoaccWriteDMAModuleImpl(outer: stereoaccWriteDMA) extends LazyModuleImp(outer){
+    name = "stereoacc-w-dma", sourceId = IdRange(0, 1))))))
+  override lazy val module = new stereoaccWriteDMAModuleImpl(this)
+  class stereoaccWriteDMAModuleImpl(outer: stereoaccWriteDMA) extends LazyModuleImp(this) {
     val io = IO(new w_dma_io)
   
     withClockAndReset(clock, reset){
@@ -110,7 +113,7 @@ class stereoaccWriteDMA(stereoaccConfig: StereoAccParams)(implicit p: Parameters
       val queue = Module(new Queue(UInt(32.W), 32))
       queue.io.enq <> io.data
 
-      val (r_count, r_done) = Counter(mem.a.fire, stereoaccConfig.imgSize)
+      val (w_count, w_done) = Counter(mem.a.fire, stereoaccConfig.imgSize)
       
       val mIdle :: mWrite :: mResp :: Nil = Enum(3)
       val mstate = RegInit(mIdle)
@@ -120,7 +123,7 @@ class stereoaccWriteDMA(stereoaccConfig: StereoAccParams)(implicit p: Parameters
 
       mem.a.bits := edge.Put(
         fromSource = 0.U,
-        toAddress = io.addr + r_count,
+        toAddress = io.addr + w_count,
         lgSize = log2Ceil(32).U - 3.U,
         data = queue.io.deq.bits
       )._2
@@ -137,33 +140,47 @@ class stereoaccWriteDMA(stereoaccConfig: StereoAccParams)(implicit p: Parameters
           mstate := Mux(mem.d.fire, mIdle, mResp)
         }
       }
+      io.done := w_done
     }
   }
 }
 
 class RoCCStereoAcc(opcodes: OpcodeSet, stereoaccConfig: StereoAccParams)(implicit p: Parameters) extends LazyRoCC(opcodes){
+    val scfg = stereoaccConfig
     override lazy val module = new RoCCStereoAccModule(this)
     val w_dma = LazyModule(new stereoaccWriteDMA(stereoaccConfig))
     val r_dma = LazyModule(new stereoaccReadDMA(stereoaccConfig))
-    w_dma.module.io <> module.dma_io.w_dma
-    r_dma.module.io <> module.dma_io.r_dma
+
+    val id_node = TLIdentityNode()
+    val xbar_node = TLXbar()   
+
+    xbar_node := TLBuffer() := r_dma.node
+    xbar_node := TLBuffer() := w_dma.node
+    id_node := TLBuffer() := xbar_node
+
+    override val tlNode = id_node
+    val node = id_node
 }
 
 class RoCCStereoAccModule(outer: RoCCStereoAcc) extends LazyRoCCModuleImp(outer) {
-  val dma_io = IO(new Bundle {
-    val r_dma = new r_dma_io
-    val w_dma = new w_dma_io
-  })
-
   chisel3.dontTouch(io)
 
   withClockAndReset(clock, reset){
     val cmd_q = Queue(io.cmd)
-    val ctrl = Module(new CtrlModule()(p))
+    val core = Module(new CoreModule(outer.scfg)(p))
+    outer.w_dma.module.io <> core.io.w_dma
+    outer.r_dma.module.io <> core.io.r_dma
+
+    core.io.rocc_req_val := cmd_q.valid
+    core.io.rocc_funct := cmd_q.bits.inst.funct
+    core.io.rocc_rs1 := cmd_q.bits.rs1
+    core.io.rocc_rs2 := cmd_q.bits.rs2
+    core.io.rocc_rd := cmd_q.bits.inst.rd
+    cmd_q.ready := core.io.rocc_req_rdy
   } 
 }
 
-class CtrlModule ()(implicit val p: Parameters) extends Module {
+class CoreModule(stereoaccConfig: StereoAccParams)(implicit val p: Parameters) extends Module {
   val io = IO(new Bundle {
     val rocc_req_val = Input(Bool())
     val rocc_req_rdy = Output(Bool())
@@ -174,8 +191,8 @@ class CtrlModule ()(implicit val p: Parameters) extends Module {
 
     val busy = Output(Bool())
 
-    val r_dma = new r_dma_io
-    val w_dma = new w_dma_io
+    val r_dma = Flipped(new r_dma_io)
+    val w_dma = Flipped(new w_dma_io)
   })
 
   val s_idle :: s_compute :: Nil = Enum(2)
@@ -194,7 +211,22 @@ class CtrlModule ()(implicit val p: Parameters) extends Module {
       }
     }
   }
+
+  val stereoacc = Module(new StereoAcc(stereoaccConfig))
+  val dma_enable = RegInit(false.B)
+  when (state === s_idle && io.rocc_req_val && io.rocc_funct === COMPUTE_CMD){
+    dma_enable := true.B
+  }
+  Pulsify(dma_enable)
+
+  io.r_dma.addr := r_addr
+  io.r_dma.enable := dma_enable
+  io.r_dma.data <> stereoacc.io.enq  
   
+  io.w_dma.addr := w_addr
+  io.w_dma.enable := dma_enable
+  stereoacc.io.deq <> io.w_dma.data
+
   io.busy := state === s_compute
   io.rocc_req_rdy := state === s_idle
 
