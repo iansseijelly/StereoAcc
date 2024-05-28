@@ -13,14 +13,9 @@ import freechips.rocketchip.rocket.TLB
 
 object StereoAccISA{
     // funct
-    val CONFIG_CMD = 0.U(7.W)
-    val COMPUTE_CMD = 1.U(7.W)
-    // rs1[2:0] for config
-    val CONFIG_DMA_R_ADDR = 0.U(3.W)
-    val CONFIG_DMA_W_ADDR = 1.U(3.W)
-    // unimplemented
-    val CONFIG_IMG_WIDTH =  2.U(3.W)
-    val CONFIG_IMG_HEIGHT = 3.U(3.W)
+    val COMPUTE_CMD = 0.U(7.W)
+    val CONFIG_DMA_R_ADDR = 1.U(7.W)
+    val CONFIG_DMA_W_ADDR = 2.U(7.W)
 }
 import StereoAccISA._
 
@@ -32,7 +27,6 @@ class WithDefaultStereoAccConfig(
     (p: Parameters) => {
       implicit val q = p
       val stereoaccrocc = LazyModule(new RoCCStereoAcc(opcodes, stereoaccConfig))
-
       stereoaccrocc
     }
   )
@@ -201,13 +195,13 @@ class CoreModule(stereoaccConfig: StereoAccParams)(implicit val p: Parameters) e
   val r_addr = Reg(UInt(32.W))
   val w_addr = Reg(UInt(32.W))
 
-  when (state === s_idle && io.rocc_req_val && io.rocc_funct === CONFIG_CMD){
-    switch(io.rocc_rs1(2,0)){
+  when (state === s_idle && io.rocc_req_val){
+    switch(io.rocc_funct){
       is(CONFIG_DMA_R_ADDR){
-        r_addr := io.rocc_rs2
+        r_addr := io.rocc_rs1
       }
       is(CONFIG_DMA_W_ADDR){
-        w_addr := io.rocc_rs2
+        w_addr := io.rocc_rs1
       }
     }
   }
