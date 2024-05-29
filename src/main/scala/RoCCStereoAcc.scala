@@ -63,7 +63,7 @@ class stereoaccReadDMA(stereoaccConfig: StereoAccParams)(implicit p: Parameters)
       queue.io.enq.bits := mem.d.bits.data
       queue.io.enq.valid := mem.d.valid
 
-      val (r_count, r_done) = Counter(mem.a.fire, stereoaccConfig.imgSize)
+      val (r_count, r_done) = Counter(mem.a.fire, stereoaccConfig.imgSize/4)
       
       val mIdle :: mRead :: mResp :: Nil = Enum(3)
       val mstate = RegInit(mIdle)
@@ -107,7 +107,7 @@ class stereoaccWriteDMA(stereoaccConfig: StereoAccParams)(implicit p: Parameters
       val queue = Module(new Queue(UInt(32.W), 32))
       queue.io.enq <> io.data
 
-      val (w_count, w_done) = Counter(mem.a.fire, stereoaccConfig.imgSize)
+      val (w_count, w_done) = Counter(mem.a.fire, stereoaccConfig.imgSize/4)
       
       val mIdle :: mWrite :: mResp :: Nil = Enum(3)
       val mstate = RegInit(mIdle)
@@ -171,6 +171,7 @@ class RoCCStereoAccModule(outer: RoCCStereoAcc) extends LazyRoCCModuleImp(outer)
     core.io.rocc_rs2 := cmd_q.bits.rs2
     core.io.rocc_rd := cmd_q.bits.inst.rd
     cmd_q.ready := core.io.rocc_req_rdy
+    io.busy := core.io.busy
   } 
 }
 
