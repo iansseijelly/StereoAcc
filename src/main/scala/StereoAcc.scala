@@ -47,7 +47,8 @@ class StereoAcc(params: StereoAccParams) extends Dataflow(CompleteDataflowConfig
     val state = RegInit(s_idle)
 
     // the left fine counter tracking the offsets of the reads
-    val (l_offset_count, l_offset_wrap) = Counter(do_compute, params.blockSize+params.fuWidth+params.searchRange)
+    val read_req_fire = rightImgBuffer.io.read.request.ready && rightImgBuffer.io.read.request.valid && leftImgBuffer.io.read.request.ready
+    val (l_offset_count, l_offset_wrap) = Counter(read_req_fire, params.blockSize+params.fuWidth+params.searchRange)
     val l_offset_response_count = RegNext(l_offset_count)
     // the left counter tracking how many left images have been read
     val (l_col_count, l_col_wrap) = Counter(l_offset_wrap, params.numIterPerRow)

@@ -68,6 +68,10 @@ class stereoaccReadDMA(stereoaccConfig: StereoAccParams)(implicit p: Parameters)
       val mIdle :: mRead :: mResp :: Nil = Enum(3)
       val mstate = RegInit(mIdle)
 
+      val enabled = RegInit(false.B)
+      when (io.enable) { enabled := true.B }
+      when (r_done) { enabled := false.B }
+
       mem.a.valid := mstate === mRead
       mem.a.bits := edge.Get(
         fromSource = 0.U,
@@ -77,15 +81,9 @@ class stereoaccReadDMA(stereoaccConfig: StereoAccParams)(implicit p: Parameters)
       mem.d.ready := mstate === mResp && queue.io.enq.ready
 
       switch (mstate){
-        is (mIdle){
-          mstate := Mux(io.enable, mRead, mIdle)
-        }
-        is (mRead){
-          mstate := Mux(mem.a.fire, mResp, mRead)
-        }
-        is (mResp){
-          mstate := Mux(mem.d.fire, mIdle, mResp)
-        }
+        is (mIdle) {mstate := Mux(enabled|io.enable, mRead, mIdle)}
+        is (mRead) {mstate := Mux(mem.a.fire, mResp, mRead)}
+        is (mResp) {mstate := Mux(mem.d.fire, mIdle, mResp)}
       }
       io.done := r_done
     }
@@ -112,6 +110,10 @@ class stereoaccWriteDMA(stereoaccConfig: StereoAccParams)(implicit p: Parameters
       val mIdle :: mWrite :: mResp :: Nil = Enum(3)
       val mstate = RegInit(mIdle)
 
+      val enabled = RegInit(false.B)
+      when (io.enable) { enabled := true.B }
+      when (w_done) { enabled := false.B }
+
       mem.a.valid := mstate === mWrite && queue.io.deq.valid
       queue.io.deq.ready := mstate === mWrite && mem.a.ready
 
@@ -124,15 +126,9 @@ class stereoaccWriteDMA(stereoaccConfig: StereoAccParams)(implicit p: Parameters
       mem.d.ready := mstate === mResp 
 
       switch (mstate){
-        is (mIdle){
-          mstate := Mux(io.enable, mWrite, mIdle)
-        }
-        is (mWrite){
-          mstate := Mux(mem.a.fire, mResp, mWrite)
-        }
-        is (mResp){
-          mstate := Mux(mem.d.fire, mIdle, mResp)
-        }
+        is (mIdle) {mstate := Mux(enabled|io.enable, mWrite, mIdle)}
+        is (mWrite){mstate := Mux(mem.a.fire, mResp, mWrite)}
+        is (mResp) {mstate := Mux(mem.d.fire, mIdle, mResp)}
       }
       io.done := w_done
     }
