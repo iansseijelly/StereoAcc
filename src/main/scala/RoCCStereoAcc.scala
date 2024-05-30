@@ -20,7 +20,10 @@ object StereoAccISA{
 import StereoAccISA._
 
 class WithDefaultStereoAccConfig(
-  stereoaccConfig: StereoAccParams = StereoAccParams(),
+  stereoaccConfig: StereoAccParams = StereoAccParams(
+    blockSize = 8,
+    searchRange = 32
+  ),
   opcodes : OpcodeSet = OpcodeSet.custom0
 ) extends Config((site, here, up) => {
   case BuildRoCC => up(BuildRoCC) ++ Seq(
