@@ -75,7 +75,7 @@ class stereoaccReadDMA(stereoaccConfig: StereoAccParams)(implicit p: Parameters)
       mem.a.valid := mstate === mRead
       mem.a.bits := edge.Get(
         fromSource = 0.U,
-        toAddress = io.addr + r_count,
+        toAddress = io.addr + (r_count << 2),
         lgSize = log2Ceil(32).U - 3.U
       )._2
       mem.d.ready := mstate === mResp && queue.io.enq.ready
@@ -119,7 +119,7 @@ class stereoaccWriteDMA(stereoaccConfig: StereoAccParams)(implicit p: Parameters
 
       mem.a.bits := edge.Put(
         fromSource = 0.U,
-        toAddress = io.addr + w_count,
+        toAddress = io.addr + (w_count << 2),
         lgSize = log2Ceil(32).U - 3.U,
         data = queue.io.deq.bits
       )._2
@@ -144,8 +144,8 @@ class RoCCStereoAcc(opcodes: OpcodeSet, stereoaccConfig: StereoAccParams)(implic
     val id_node = TLIdentityNode()
     val xbar_node = TLXbar()   
 
-    xbar_node := TLBuffer() := r_dma.node
-    xbar_node := TLBuffer() := w_dma.node
+    xbar_node := TLBuffer() := TLWidthWidget(4) := r_dma.node
+    xbar_node := TLBuffer() := TLWidthWidget(4) := w_dma.node
     id_node := TLBuffer() := xbar_node
 
     override val tlNode = id_node

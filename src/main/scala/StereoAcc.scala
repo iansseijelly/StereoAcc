@@ -58,6 +58,8 @@ class StereoAcc(params: StereoAccParams) extends Dataflow(CompleteDataflowConfig
 
     // keeping track of the number of rows operated on
     val (row_count, row_wrap) = Counter(column_done, params.imgHeight-params.blockSize)
+    val row_done = RegInit(false.B)
+    when (row_wrap) {row_done := true.B}
 
     def do_compute = state === s_stable
     val read_index = l_col_count * params.fuWidth.U +& l_offset_count
@@ -96,7 +98,7 @@ class StereoAcc(params: StereoAccParams) extends Dataflow(CompleteDataflowConfig
         is(s_tail) {
             // hold the state until the output is collected
             when (deq_wrap) {state := Mux(
-                row_wrap, s_reset, Mux(
+                row_done, s_reset, Mux(
                 column_done, s_idle, s_stable)
                 )
             }
@@ -113,6 +115,7 @@ class StereoAcc(params: StereoAccParams) extends Dataflow(CompleteDataflowConfig
             // just to be safe
             l_offset_count := 0.U
             deq_ptr := 0.U
+            row_done := false.B
         }
     }
 
