@@ -48,6 +48,7 @@ class w_dma_io extends Bundle{
   val data = Flipped(Decoupled(UInt(32.W)))
   val done = Output(Bool())
 }
+
 class stereoaccReadDMA(stereoaccConfig: StereoAccParams)(implicit p: Parameters) extends LazyModule {
   val node = TLClientNode(Seq(TLMasterPortParameters.v1(Seq(TLClientParameters(
     name = "stereoacc-r-dma", sourceId = IdRange(0, 1)))))

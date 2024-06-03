@@ -63,7 +63,9 @@ case class Pool2DParams(
 
 case class EdgeDetAccParams (
     imgWidth: Int = 256,
-    imgHeight: Int = 256,
+    imgHeight: Int = 256,    
+    // threashold for determining if a pixel is edge
+    threshold: Int = 64,
     dfChannelWidth: Int = 32
 ) extends BaseDataflowParameter(channelWidth = dfChannelWidth) {
     require(imgWidth % 4 == 0, "The width of the image must be a multiple of 4bytes, 32 bits")

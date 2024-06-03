@@ -146,9 +146,21 @@ class SobelConvPipe(param: EdgeDetAccParams) extends Module {
         val result = y_stationary_reg(y)(x) * circular_reg.io.data(y)(x).asSInt
         result
     }.reduceTree(_+&_)
+
+    val abs_x_sum = {
+        val abs_pe = Module(new ABS_PE)
+        abs_pe.io.A := x_sum
+        abs_pe.io.AD
+    }
+
+    val abs_y_sum = {
+        val abs_pe = Module(new ABS_PE)
+        abs_pe.io.A := y_sum
+        abs_pe.io.AD
+    }
     
     // if anything is non-zero, the edge is detected
-    io.output.bits := Mux(x_sum =/= 0.S || y_sum =/= 0.S, 0xFF.U, 0.U)
+    io.output.bits := Mux(abs_x_sum + abs_y_sum >= param.threshold.U, 255.U, 0.U)
     io.output.valid := do_compute
 
     when (io.done) {

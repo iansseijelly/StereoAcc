@@ -30,3 +30,11 @@ class Mux_ADPE extends Any_ADPE {
     val small = Mux(A_ge_B, io.B, io.A)
     io.AD := large - small
 }
+
+class ABS_PE extends Module {
+    val io = IO(new Bundle{
+        val A = Input(SInt(8.W))
+        val AD = Output(UInt(8.W))
+    })
+    io.AD := Mux(io.A(7), -io.A, io.A).asUInt
+}
