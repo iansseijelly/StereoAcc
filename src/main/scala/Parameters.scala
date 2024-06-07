@@ -39,7 +39,9 @@ case class StereoAccParams(
     // def numBlocksPerIter: Int = fuDepth / blockSize
     def numIterPerRow: Int = (imgWidth-searchRange-blockSize)/fuWidth
     def imgSize = imgHeight * imgWidth
-    def stereoImgSize = (imgWidth - blockSize - searchRange) * (imgHeight - blockSize)
+    def stereoImgWidth = imgWidth - blockSize - searchRange
+    def stereoImgHeight = imgHeight - blockSize
+    def stereoImgSize = stereoImgWidth * stereoImgHeight
     override def elaborate: StereoAcc = Module(new StereoAcc(this))
 }
 
