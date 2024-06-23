@@ -250,7 +250,7 @@ class OptCoreModule(stereoaccConfig: StereoAccParams) extends AbstractCoreModule
   switch(state){
     is(s_idle){
       state := Mux(io.rocc_req_val && io.rocc_funct === COMPUTE_CMD,
-        Mux(r_row_count < stereoaccConfig.blockSize.U, s_fill, s_compute), 
+        Mux(r_row_count < (stereoaccConfig.blockSize-1).U, s_fill, s_compute), 
         s_idle)
     }
     is (s_fill){

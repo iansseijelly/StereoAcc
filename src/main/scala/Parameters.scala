@@ -6,7 +6,7 @@ import rose.BaseDataflowParameter
 
 case class StereoAccParams(
     // The size of matching block in pixels(bytes)
-    blockSize: Int = 4,
+    blockSize: Int = 8,
     // The number of functional units
     fuWidth: Int = 4,
     // The depth of the functional units (number of blocks computed per cycle)
@@ -23,7 +23,7 @@ case class StereoAccParams(
     useSRAM: Boolean = true,
     // search range
     // TODO: make me MMIO?
-    searchRange : Int = 16,
+    searchRange : Int = 32,
     // *** BaseDataflow Parameters ***
     dfChannelWidth: Int = 32
 ) extends BaseDataflowParameter(channelWidth = dfChannelWidth) {

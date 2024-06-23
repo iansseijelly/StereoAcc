@@ -57,7 +57,7 @@ class StereoAcc(params: StereoAccParams) extends Dataflow(CompleteDataflowConfig
     Pulsify(column_done)
 
     // keeping track of the number of rows operated on
-    val (row_count, row_wrap) = Counter(column_done, params.imgHeight-params.blockSize)
+    val (row_count, row_wrap) = Counter(column_done, params.imgHeight-params.blockSize+1)
     val row_done = RegInit(false.B)
     when (row_wrap) {row_done := true.B}
 
